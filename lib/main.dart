@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'tema.dart';
 import 'tienda.dart';
+import 'servicios/google_api.dart';
 import 'pantallas/entrada.dart';
 import 'pantallas/principal.dart';
 
@@ -8,6 +9,8 @@ import 'pantallas/principal.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await tienda.cargar();
+  // Google (si está configurado): recupera la sesión en segundo plano.
+  servicioGoogle.iniciar().catchError((_) {});
   runApp(const ClaquetaApp());
 }
 

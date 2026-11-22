@@ -1,4 +1,4 @@
-# Claqueta (Flutter) — avance v0.2
+# Claqueta (Flutter) — Momento evaluativo 2 (v0.5)
 
 App para realizadores audiovisuales freelance: cotiza, agenda y cobra.
 Identidad Pizarrón (teal/arena, Krona One + Figtree). Todo en español, moneda COP.
@@ -31,6 +31,13 @@ Identidad Pizarrón (teal/arena, Krona One + Figtree). Todo en español, moneda 
 > Esta versión no pudo compilarse donde se escribió (no había Flutter instalado):
 > el código se revisó a mano y con un analizador de sintaxis. Si `flutter run`
 > muestra algún error, pega el mensaje completo y se corrige.
+
+## Documentación del Momento 2
+
+- [Inventario de funcionalidades](docs/INVENTARIO_FUNCIONALIDADES.md): 12 planificadas, 10 completas, 2 parciales (simuladas).
+- [Design System](docs/DESIGN_SYSTEM.md): colores, tipografías y componentes centralizados.
+- [Arquitectura](docs/ARQUITECTURA.md): modelos, tienda (ChangeNotifier) y pantallas.
+- [Guion de sustentación](docs/SUSTENTACION.md).
 
 ## Qué hace
 

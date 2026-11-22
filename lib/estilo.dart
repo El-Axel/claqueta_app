@@ -4,13 +4,32 @@ import 'package:flutter/material.dart';
 import 'tema.dart';
 
 // ---------------------------------------------------------------
-// ESTILO "OSCURO CON ACENTO" (referentes: apps de tareas y billetera)
+// ESTILO "LIMPIO" (el del Home rediseñado, ahora en toda la app)
 // - Fondo casi negro con una bruma teal arriba y un poco de grano.
-// - Tarjetas oscuras con borde finito (sin desenfoque: más rápido).
-// - UN solo acento brillante (arena) para lo importante: botón principal,
-//   pestaña activa, chip elegido, barra destacada.
-// - Una tarjeta "hero" con degradado teal -> arena y texto oscuro.
+// - Tarjetas suaves: blanco casi transparente, radio grande y borde
+//   apenas visible (sin sombras ni degradados: menos ruido visual).
+// - UN solo acento (arena) para lo importante: botón principal,
+//   pestaña activa, chip elegido, cifra destacada.
+// - Etiquetas de sección pequeñas en mayúsculas espaciadas.
 // ---------------------------------------------------------------
+
+// Medidas del estilo limpio en un solo sitio: si se cambian aquí,
+// cambian en todas las tarjetas, filas y campos de la app.
+const double radioTarjeta = 28;
+const int alfaFondoSuave = 13; // relleno blanco casi transparente
+const int alfaBordeSuave = 22; // borde que apenas se nota
+
+/// Decoración de las tarjetas suaves. La usan TarjetaSuave, Panel,
+/// los campos de texto y los estados vacíos para verse iguales.
+/// - tinte: si se da, colorea muy poco el fondo y el borde (resaltes).
+BoxDecoration decoracionSuave({double radio = radioTarjeta, Color? tinte}) {
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(radio),
+    color: tinte == null ? Colors.white.withAlpha(alfaFondoSuave) : tinte.withAlpha(26),
+    border: Border.all(
+        color: tinte == null ? Colors.white.withAlpha(alfaBordeSuave) : tinte.withAlpha(60)),
+  );
+}
 
 // Puntos de grano (se generan una sola vez; siempre iguales)
 final List<Offset> _granos = () {
@@ -215,10 +234,11 @@ class BotonCirculo extends StatelessWidget {
       child: Container(
         width: tamano,
         height: tamano,
+        // Mismo relleno y borde que las tarjetas suaves.
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withAlpha(10),
-          border: Border.all(color: Colors.white.withAlpha(34)),
+          color: Colors.white.withAlpha(16),
+          border: Border.all(color: Colors.white.withAlpha(alfaBordeSuave)),
         ),
         child: Icon(icono, size: tamano * 0.46, color: Paleta.tinta),
       ),
@@ -473,7 +493,7 @@ class Ficha extends StatelessWidget {
         shape: redonda ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: redonda ? null : BorderRadius.circular(tamano * 0.32),
         color: Colors.white.withAlpha(14),
-        border: Border.all(color: Colors.white.withAlpha(34)),
+        border: Border.all(color: Colors.white.withAlpha(alfaBordeSuave)),
       ),
       child: Text(
         inicial,
@@ -499,7 +519,7 @@ class Estadisticas extends StatelessWidget {
     final hijos = <Widget>[];
     for (int i = 0; i < datos.length; i++) {
       if (i > 0) {
-        hijos.add(Container(width: 1, height: 34, color: Colors.white.withAlpha(30)));
+        hijos.add(Container(width: 1, height: 34, color: Colors.white.withAlpha(alfaBordeSuave)));
       }
       final color = i < colores.length ? colores[i] : Paleta.tinta;
       hijos.add(
@@ -508,11 +528,13 @@ class Estadisticas extends StatelessWidget {
             children: [
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(datos[i][0], style: estiloDisplay(tamano: 20, color: color)),
+                // Igual que las cifras del Home (CifraLado): Figtree en negrita.
+                child: Text(datos[i][0],
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(datos[i][1],
-                  textAlign: TextAlign.center, maxLines: 2, style: estiloSuave(tamano: 11)),
+                  textAlign: TextAlign.center, maxLines: 2, style: estiloSuave(tamano: 12.5)),
             ],
           ),
         ),
@@ -521,3 +543,160 @@ class Estadisticas extends StatelessWidget {
     return Row(children: hijos);
   }
 }
+
+// ======================================================================
+// Piezas del Home limpio, ahora públicas para que todas las pantallas
+// las reutilicen (antes eran privadas en inicio.dart).
+// ======================================================================
+
+/// Etiqueta de sección: texto pequeño en mayúsculas y espaciado.
+/// Ordena la pantalla sin gritar (no compite con el contenido).
+class EtiquetaSeccion extends StatelessWidget {
+  final String texto;
+  const EtiquetaSeccion(this.texto, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Text(
+        texto.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.3,
+          color: Paleta.tinta.withAlpha(140),
+        ),
+      );
+}
+
+/// Tarjeta suave: el bloque principal del estilo limpio.
+/// Radio grande, relleno generoso y borde casi invisible.
+class TarjetaSuave extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? alTocar;
+  final EdgeInsets relleno;
+  const TarjetaSuave(
+      {super.key, required this.child, this.alTocar, this.relleno = const EdgeInsets.all(22)});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: alTocar,
+      child: Container(
+        width: double.infinity,
+        padding: relleno,
+        decoration: decoracionSuave(),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Renglón con ícono tenue y texto (hora, lugar, clima...).
+class DatoLinea extends StatelessWidget {
+  final IconData icono;
+  final String texto;
+  const DatoLinea(this.icono, this.texto, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Icon(icono, size: 17, color: Paleta.tinta.withAlpha(150)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(texto,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 14, color: Paleta.tinta.withAlpha(215))),
+          ),
+        ],
+      );
+}
+
+/// Atajo cuadrado con ícono y nombre debajo. El principal va en arena.
+class Atajo extends StatelessWidget {
+  final IconData icono;
+  final String texto;
+  final VoidCallback alTocar;
+  final bool principal;
+  const Atajo(this.icono, this.texto, this.alTocar, {super.key, this.principal = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: alTocar,
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                color: principal ? Paleta.arena : Colors.white.withAlpha(14),
+                border: principal ? null : Border.all(color: Colors.white.withAlpha(20)),
+              ),
+              child: Icon(icono, size: 26, color: principal ? Paleta.suelo : Paleta.tinta),
+            ),
+            const SizedBox(height: 8),
+            Text(texto, style: estiloSuave(tamano: 12.5)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cifra grande con su nombre debajo (Por cobrar / Cobrado...).
+class CifraLado extends StatelessWidget {
+  final String titulo;
+  final String valor;
+  final Color color;
+  const CifraLado(this.titulo, this.valor, {super.key, this.color = Paleta.tinta});
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          // FittedBox: si la cifra es larga, se encoge en vez de desbordar.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(valor,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
+          ),
+          const SizedBox(height: 3),
+          Text(titulo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: estiloSuave(tamano: 13)),
+        ],
+      );
+}
+
+/// Botón píldora arena de ancho ajustado (acción dentro de una tarjeta).
+class BotonArena extends StatelessWidget {
+  final String texto;
+  final VoidCallback alTocar;
+  const BotonArena(this.texto, this.alTocar, {super.key});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: alTocar,
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(99),
+            color: Paleta.arena,
+          ),
+          child: Text(texto,
+              style: const TextStyle(
+                  color: Paleta.suelo, fontWeight: FontWeight.w800, fontSize: 15)),
+        ),
+      );
+}
+
+/// Título de pantalla al estilo del saludo del Home: Figtree grande en
+/// negrita (no Krona One), con subtítulo tenue debajo.
+TextStyle estiloTituloPantalla() =>
+    const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, height: 1.1, color: Paleta.tinta);

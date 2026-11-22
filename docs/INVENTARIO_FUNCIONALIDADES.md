@@ -4,7 +4,7 @@ Proyecto integrador · Lenguaje de Programación para APPs · Momento evaluativo
 Estado honesto de cada funcionalidad: **Completa** (funciona de punta a punta y se puede demostrar),
 **Parcial** (funciona con una parte simulada) o **Planificada** (aún no).
 
-Alcance acordado: 12 funcionalidades. Completas: 9 (75 %). Parciales: 3.
+Alcance acordado: 12 funcionalidades. Completas: 12 (100 %).
 Requisito del curso: mínimo 6 planificadas, al menos 3 completas y, si hay más de 6, completar la mitad.
 
 | # | Funcionalidad | Estado | Dónde se ve | Cómo demostrarla (30 s) |
@@ -19,10 +19,19 @@ Requisito del curso: mínimo 6 planificadas, al menos 3 completas y, si hay más
 | F8 | Finanzas: cobrado, por cobrar, aceptado, gráfica 6 meses, tasa de aceptación, mejores clientes (calculado desde cotizaciones y pagos) | Completa | `finanzas.dart` | Registrar un pago en un trabajo → cambia Finanzas |
 | F9 | Seguimiento: aviso cuando una cotización enviada lleva N días sin respuesta + mensaje de recordatorio | Completa | `inicio.dart`, `Tienda.porSeguimiento` | Inicio → "Requiere tu atención" |
 | F10 | Persistencia local y copia de seguridad (exportar / restaurar / restablecer) | Completa | `tienda.dart`, `ajustes.dart` | Crear un cliente → cerrar y abrir la app → sigue ahí |
-| F11 | Clima y plan B (fechas sin lluvia y sin cruces) | Parcial | `util.dart` (`climaDe`), `detalle_trabajo.dart` | El clima se **simula** por fecha; el plan B sí es real. En la versión final: Google Weather API |
-| F12 | Login con Google, mapa/lugares y evento en Calendar | Parcial | `entrada.dart`, `agendar_trabajo.dart` | Flujo completo pero **simulado**. En la versión final: `google_sign_in`, Maps y Calendar API con permisos mínimos |
+| F11 | Mapa, búsqueda de direcciones, clima real y plan B (fechas sin lluvia y sin cruces) | Completa | `servicios/lugares_api.dart` (OpenStreetMap/Nominatim), `servicios/clima_api.dart` (Open-Meteo), `widgets.dart` (`MapaLugar`, `TarjetaClima`) | Agendar → escribir "Parque Arví" → elegir resultado → aparece el mapa real y el pronóstico; "Cómo llegar" abre Google Maps. Más de 16 días: el clima se marca **Estimado** |
+| F12 | Login con Google, envío por Gmail (correo con la identidad de marca + PDF adjunto) y eventos en Google Calendar (crear, invitar, reprogramar, borrar) | Completa · probada con cuenta real el 22 nov 2026 (login, correo recibido en Gmail y evento visible en Google Calendar) | `servicios/google_api.dart`, `entrada.dart`, `envio_cotizacion.dart`, `agendar_trabajo.dart`, `detalle_trabajo.dart` | Requiere el ID de cliente (ver `docs/GOOGLE_CLOUD_SETUP.md`). Sin él, la app funciona en **modo demostración** y lo dice en pantalla |
 
-Conteo: **F1–F10 completas (10), F11–F12 parciales (2)**. Total 12, 83 % del alcance completo.
+Conteo: **F1–F12 completas (12 de 12, 100 % del alcance)**.
+La búsqueda de direcciones prioriza la ciudad donde estás (ubicación aproximada, con permiso al abrir "Agendar trabajo").
+
+¿Por qué OpenStreetMap y Open-Meteo y no Google Maps/Weather? Las APIs de Google Maps
+exigen activar facturación en Google Cloud. OpenStreetMap y Open-Meteo son gratuitos, no
+piden clave y no guardan secretos en la app. Para la ruta, el botón "Cómo llegar" abre
+Google Maps por enlace (sin clave).
+
+Evidencia de pruebas: `flutter test` (lógica, integraciones sin internet y recorrido
+automático clic por clic de las 17 pantallas → `docs/PRUEBA_CLICS.md`).
 
 ## Pantallas (17), todas navegables
 
@@ -34,4 +43,7 @@ Clientes · Detalle de cliente · Formulario de cliente · Ajustes.
 
 - WhatsApp sin la API de pago no adjunta el PDF desde un enlace: se comparte el PDF aparte con el menú del teléfono.
 - Los precios del catálogo son de ejemplo.
-- Las llaves de Google nunca van en el repositorio.
+- Las llaves de Google nunca van en el repositorio: el ID de cliente se pasa al compilar con `--dart-define` y no se usa Client Secret.
+- La app de Google está en modo "Prueba": solo pueden entrar los usuarios de prueba agregados en Google Cloud.
+- El pronóstico real cubre 16 días; más allá, el clima es estimado y se marca así.
+- Inicio de sesión real con Google solo en Android; en la versión web se usa el modo demostración.

@@ -38,50 +38,43 @@ class PestanaFinanzas extends StatelessWidget {
         }
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 112),
+          // Mismos márgenes que el Home.
+          padding: const EdgeInsets.fromLTRB(22, 14, 22, 124),
           children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Text('Finanzas', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
-            ),
-            const SizedBox(height: 4),
-            Text('Cómo va tu negocio', style: estiloSuave(tamano: 13)),
-            const SizedBox(height: 18),
+            const Encabezado('Finanzas', subtitulo: 'Cómo va tu negocio'),
+            const SizedBox(height: 22),
 
-            // ---- Tarjeta hero con la cifra grande y tres cuadros oscuros ----
-            TarjetaHero(
-              relleno: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            // ---- Resumen en tarjeta suave (antes degradado teal -> arena) ----
+            // Misma receta del Home: etiqueta pequeña, cifra grande y, abajo,
+            // tres cifras con su nombre (CifraLado).
+            TarjetaSuave(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Expanded (no Spacer): la etiqueta cede espacio y no desborda
+                  // en pantallas angostas.
                   Row(
                     children: [
-                      const PildoraOscura('COP'),
+                      const Expanded(child: EtiquetaSeccion('Cobrado · COP')),
                       const SizedBox(width: 8),
-                      PildoraOscura('${(cobradoPct * 100).round()}% cobrado'),
+                      Text('${(cobradoPct * 100).round()}% cobrado',
+                          style: const TextStyle(
+                              color: Paleta.arena, fontWeight: FontWeight.w700, fontSize: 13)),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  Text('Cobrado',
-                      style: TextStyle(
-                          color: Paleta.suelo.withAlpha(180),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text(formatearPesos(tienda.cobrado),
-                        style: estiloDisplay(tamano: 38, color: Paleta.suelo)),
+                    child: Text(formatearPesos(tienda.cobrado), style: estiloDisplay(tamano: 32)),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 22),
                   Row(
                     children: [
-                      _CuadroOscuro('Por cobrar', pesosCortos(tienda.porCobrar)),
-                      const SizedBox(width: 8),
-                      _CuadroOscuro('Aceptado', pesosCortos(tienda.aceptado)),
-                      const SizedBox(width: 8),
-                      _CuadroOscuro('Negociación', pesosCortos(tienda.enNegociacion)),
+                      Expanded(child: CifraLado('Por cobrar', pesosCortos(tienda.porCobrar))),
+                      Expanded(child: CifraLado('Aceptado', pesosCortos(tienda.aceptado))),
+                      Expanded(
+                          child: CifraLado('Negociación', pesosCortos(tienda.enNegociacion))),
                     ],
                   ),
                 ],
@@ -90,8 +83,8 @@ class PestanaFinanzas extends StatelessWidget {
 
             // ---- Cápsulas por mes (referente "Great Progress") ----
             const TituloSeccion('Cobrado por mes'),
-            Panel(
-              relleno: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            TarjetaSuave(
+              relleno: const EdgeInsets.fromLTRB(20, 20, 20, 16),
               child: maximo == 0
                   ? Text('Aún no hay pagos registrados.', style: estiloSuave(tamano: 13))
                   : Column(
@@ -104,12 +97,10 @@ class PestanaFinanzas extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Últimos 6 meses',
-                                      style: TextStyle(
-                                          fontSize: 16, fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 2),
+                                  const EtiquetaSeccion('Últimos 6 meses'),
+                                  const SizedBox(height: 6),
                                   Text('Lo que ya entró a tu bolsillo',
-                                      style: estiloSuave(tamano: 12)),
+                                      style: estiloSuave(tamano: 13)),
                                 ],
                               ),
                             ),
@@ -159,7 +150,7 @@ class PestanaFinanzas extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const Divider(color: Colors.white24, height: 26),
+                  const Divider(height: 26),
                   for (final e in estados)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -201,37 +192,6 @@ class PestanaFinanzas extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _CuadroOscuro extends StatelessWidget {
-  final String titulo;
-  final String valor;
-  const _CuadroOscuro(this.titulo, this.valor);
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        decoration: BoxDecoration(
-          color: Paleta.suelo.withAlpha(200),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(valor, style: estiloDisplay(tamano: 15)),
-            ),
-            const SizedBox(height: 4),
-            Text(titulo, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: estiloSuave(tamano: 11)),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -278,25 +238,18 @@ class _Capsula extends StatelessWidget {
         Container(
           height: alto,
           alignment: Alignment.bottomCenter,
+          // Riel casi invisible; relleno plano (sin degradado ni brillo).
+          // Solo el mes destacado lleva el acento arena; los demás, tinta
+          // tenue, igual que la pista del anillo de cobro del Home.
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(10),
+            color: Colors.white.withAlpha(8),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withAlpha(26)),
           ),
           child: Container(
             height: relleno,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: destacada
-                    ? [const Color(0xFFD9A94E), Paleta.arena, const Color(0xFFF8DA9C)]
-                    : [const Color(0xFF14403B), Paleta.teal.withAlpha(150)],
-              ),
-              boxShadow: destacada
-                  ? [BoxShadow(color: Paleta.arena.withAlpha(70), blurRadius: 14)]
-                  : null,
+              color: destacada ? Paleta.arena : Paleta.tinta.withAlpha(40),
             ),
           ),
         ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../servicios/google_api.dart';
+import '../selectores.dart';
+import '../servicios/ubicacion.dart';
 import '../tema.dart';
 import '../tienda.dart';
 import '../widgets.dart';
@@ -11,45 +14,68 @@ class PantallaAjustes extends StatelessWidget {
   const PantallaAjustes({super.key});
 
   static const _integraciones = [
-    ['maps', 'Google Maps', 'Direcciones y mapa'],
-    ['clima', 'Google Weather', 'Pronóstico del rodaje'],
-    ['calendar', 'Google Calendar', 'Crear eventos'],
+    ['maps', 'Mapa (OpenStreetMap)', 'Buscar direcciones y ver el lugar'],
+    ['clima', 'Clima (Open-Meteo)', 'Pronóstico real a 16 días'],
+    ['calendar', 'Google Calendar', 'Crear eventos de rodaje'],
     ['gmail', 'Gmail', 'Solo enviar cotizaciones'],
   ];
+
+  Future<void> _conectarGoogle(BuildContext context) async {
+    try {
+      await servicioGoogle.entrar();
+      if (context.mounted) mostrarAviso(context, 'Conectado como ${servicioGoogle.correo}');
+    } catch (e) {
+      if (context.mounted) mostrarAviso(context, e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: tienda,
+      listenable: Listenable.merge([tienda, servicioGoogle]),
       builder: (context, _) {
         final cfg = tienda.config;
+        final g = servicioGoogle;
+        final nombre = g.conectado && g.nombre.isNotEmpty ? g.nombre : 'Alexander Pino Caro';
         return Lienzo(
           appBar: barra('Ajustes'),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 40),
             children: [
-              Panel(
+              // Perfil en tarjeta suave, con la misma ficha redonda del avatar
+              // del Home (antes un círculo teal sólido).
+              TarjetaSuave(
+                relleno: const EdgeInsets.all(18),
                 child: Row(
                   children: [
-                    const CircleAvatar(
-                      radius: 24,
-                      backgroundColor: Paleta.teal,
-                      child: Text('A',
-                          style: TextStyle(
-                              color: Paleta.suelo, fontWeight: FontWeight.w800, fontSize: 18)),
-                    ),
+                    Ficha(nombre[0].toUpperCase(), tamano: 48, redonda: true),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Alexander Pino Caro',
-                              style: TextStyle(fontWeight: FontWeight.w800)),
-                          Text('alexpinocaro@gmail.com', style: estiloSuave(tamano: 13)),
+                          Text(nombre,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                          Text(
+                              g.conectado
+                                  ? g.correo
+                                  : g.real
+                                      ? 'Google sin conectar'
+                                      : 'Modo demostración',
+                              overflow: TextOverflow.ellipsis,
+                              style: estiloSuave(tamano: 13)),
                         ],
                       ),
                     ),
-                    const Etiqueta('Conectado'),
+                    if (g.conectado)
+                      const Etiqueta('Conectado')
+                    else if (g.real)
+                      TextButton(
+                          onPressed: () => _conectarGoogle(context), child: const Text('Conectar'))
+                    else
+                      Etiqueta('Demo', color: Paleta.tinta.withAlpha(150)),
                   ],
                 ),
               ),
@@ -68,13 +94,13 @@ class PantallaAjustes extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(i[1], style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  Text(i[2], style: estiloSuave()),
+                                  Text(i[2], style: estiloSuave(tamano: 13)),
                                 ],
                               ),
                             ),
+                            // Color del interruptor: lo pone el tema (arena).
                             Switch(
                               value: tienda.integracion(i[0]),
-                              activeColor: Paleta.teal,
                               onChanged: (v) => tienda.cambiarIntegracion(i[0], v),
                             ),
                           ],
@@ -85,7 +111,46 @@ class PantallaAjustes extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'En esta versión las integraciones están simuladas. Al apagarlas verás cómo cambian las demás pantallas.',
+                servicioGoogle.real
+                    ? 'Mapa y clima son gratuitos y no piden cuenta. Gmail y Calendar usan tu cuenta de Google con permisos mínimos.'
+                    : 'Mapa y clima son reales. Gmail y Calendar están en modo demostración hasta configurar Google.',
+                style: estiloSuave(tamano: 12),
+              ),
+              const TituloSeccion('Zona de búsqueda'),
+              Panel(
+                relleno: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  children: [
+                    _Linea(
+                      'Ciudad',
+                      cfg.ciudad.isEmpty ? 'Toda Colombia' : cfg.ciudad,
+                      () => _elegirCiudad(context),
+                    ),
+                    const Divider(color: Colors.white24, height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          try {
+                            final c = await usarMiUbicacion();
+                            if (context.mounted) mostrarAviso(context, 'Zona: $c');
+                          } catch (e) {
+                            if (context.mounted) {
+                              await elegirCiudad(context,
+                                  motivo: e.toString().replaceFirst('Exception: ', ''));
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.my_location, size: 18),
+                        label: const Text('Usar mi ubicación aproximada'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Al buscar direcciones salen primero los lugares de tu ciudad. También define el clima del Inicio.',
                 style: estiloSuave(tamano: 12),
               ),
               const TituloSeccion('Mi negocio'),
@@ -101,7 +166,7 @@ class PantallaAjustes extends StatelessWidget {
                         tienda.guardarConfig();
                       }),
                     ),
-                    const Divider(color: Colors.white24, height: 8),
+                    const Divider(height: 8),
                     _Linea(
                       'Mi WhatsApp',
                       cfg.telefono.isEmpty ? 'Sin definir' : cfg.telefono,
@@ -110,7 +175,17 @@ class PantallaAjustes extends StatelessWidget {
                         tienda.guardarConfig();
                       }),
                     ),
-                    const Divider(color: Colors.white24, height: 8),
+                    const Divider(height: 8),
+                    // Sale en el pie de los correos de cotización.
+                    _Linea(
+                      'Mi sitio web',
+                      cfg.web.isEmpty ? 'Sin definir' : cfg.web,
+                      () => _editarTexto(context, 'Mi sitio web', cfg.web, (v) {
+                        cfg.web = v;
+                        tienda.guardarConfig();
+                      }),
+                    ),
+                    const Divider(height: 8),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Row(
@@ -121,7 +196,6 @@ class PantallaAjustes extends StatelessWidget {
                           ),
                           Switch(
                             value: cfg.iva,
-                            activeColor: Paleta.teal,
                             onChanged: (v) {
                               cfg.iva = v;
                               tienda.guardarConfig();
@@ -130,7 +204,7 @@ class PantallaAjustes extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Divider(color: Colors.white24, height: 8),
+                    const Divider(height: 8),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
@@ -151,7 +225,7 @@ class PantallaAjustes extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Divider(color: Colors.white24, height: 8),
+                    const Divider(height: 8),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
@@ -171,15 +245,25 @@ class PantallaAjustes extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Divider(color: Colors.white24, height: 8),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
+                    const Divider(height: 8),
+                    // Arreglo del desborde a 390 px: los dos textos estaban
+                    // sueltos en la Row y juntos no cabían. Con Expanded/Flexible
+                    // cada uno toma su parte y el valor se corta con "…".
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Moneda', style: TextStyle(color: Paleta.tinta)),
-                          Text('COP · Peso colombiano',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Expanded(
+                            child: Text('Moneda', style: TextStyle(fontWeight: FontWeight.w700)),
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text('COP · Peso colombiano',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
+                                style: estiloSuave(tamano: 13)),
+                          ),
                         ],
                       ),
                     ),
@@ -229,6 +313,7 @@ class PantallaAjustes extends StatelessWidget {
                 );
                 if (ok && context.mounted) {
                   tienda.cerrarSesion();
+                  servicioGoogle.salir().catchError((_) {});
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (_) => const PantallaEntrada()),
@@ -244,6 +329,9 @@ class PantallaAjustes extends StatelessWidget {
       },
     );
   }
+
+  /// Escribir la ciudad a mano (si no quieres dar permiso de ubicación).
+  Future<void> _elegirCiudad(BuildContext context) => elegirCiudad(context);
 
   Future<void> _editarTexto(
       BuildContext context, String titulo, String actual, void Function(String) guardar) async {

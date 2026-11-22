@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'modelos.dart';
+import 'servicios/clima_api.dart';
 import 'util.dart';
 
 // ---------------------------------------------------------------
@@ -17,6 +18,12 @@ final Tienda tienda = Tienda();
 
 class Tienda extends ChangeNotifier {
   static const String _clave = 'claqueta-v2';
+
+  // Cuando llega el pronóstico real de Open-Meteo, las pantallas que
+  // escuchan la tienda se redibujan solas (sin guardar nada).
+  Tienda() {
+    servicioClima.addListener(notifyListeners);
+  }
 
   List<Cliente> clientes = [];
   List<Servicio> servicios = [];
@@ -124,6 +131,15 @@ class Tienda extends ChangeNotifier {
   }
 
   void guardarConfig() => _cambio();
+
+  /// Cambia la zona base (ciudad) usada para buscar lugares y el clima.
+  void cambiarZona(String ciudad, double lat, double lon) {
+    config
+      ..ciudad = ciudad
+      ..lat = lat
+      ..lon = lon;
+    _cambio();
+  }
 
   // ---------- Búsquedas ----------
   Cliente cliente(int id) => clientes.firstWhere(

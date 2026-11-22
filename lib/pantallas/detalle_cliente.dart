@@ -47,21 +47,26 @@ class DetalleCliente extends StatelessWidget {
             ),
           ]),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 40),
             children: [
-              Center(child: Ficha(inicialDe(c.nombre), tamano: 88)),
-              const SizedBox(height: 12),
-              Center(child: Text(c.nombre, style: estiloDisplay(tamano: 18), textAlign: TextAlign.center)),
-              const SizedBox(height: 16),
-              Panel(
-                relleno: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              Center(child: Ficha(inicialDe(c.nombre), tamano: 84, redonda: true)),
+              const SizedBox(height: 14),
+              // Nombre con el estilo del saludo del Home (Figtree en negrita).
+              Center(
+                  child: Text(c.nombre,
+                      style: estiloTituloPantalla(), textAlign: TextAlign.center)),
+              const SizedBox(height: 22),
+              // Cifras en tinta y solo lo cobrable (Aceptado) en arena:
+              // antes cada cifra tenía un color distinto.
+              TarjetaSuave(
+                relleno: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
                 child: Estadisticas(
                   [
                     ['${cots.length}', 'Cotizaciones'],
                     [pesosCortos(aceptado), 'Aceptado'],
                     ['${trabajos.length}', 'Trabajos'],
                   ],
-                  colores: const [Paleta.teal, Paleta.arena, Paleta.durazno],
+                  colores: const [Paleta.tinta, Paleta.arena, Paleta.tinta],
                 ),
               ),
               const SizedBox(height: 10),

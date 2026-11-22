@@ -100,7 +100,7 @@ class DetalleCotizacion extends StatelessWidget {
             ),
           ]),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+            padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,16 +109,17 @@ class DetalleCotizacion extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(c.proyecto, style: estiloDisplay(tamano: 18)),
+                        // Título como el del Home (Figtree en negrita, no Krona).
+                        Text(c.proyecto, style: estiloTituloPantalla()),
                         const SizedBox(height: 4),
-                        Text(cl.nombre, style: estiloSuave(tamano: 13)),
+                        Text(cl.nombre, style: estiloSuave(tamano: 14)),
                       ],
                     ),
                   ),
                   Etiqueta(c.estado, color: coloresEstado[c.estado] ?? Paleta.teal),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 22),
               LineaEstado(c.estado),
               if (c.estado == estEnviada) ...[
                 const SizedBox(height: 14),
@@ -127,7 +128,10 @@ class DetalleCotizacion extends StatelessWidget {
                       ? 'Enviada hace $diasEnviada días sin respuesta. Es buen momento de hacer seguimiento.'
                       : 'Enviada hace $diasEnviada días. Vigente hasta ${fechaCorta(c.vence)}.',
                   icono: Icons.schedule,
-                  color: diasEnviada >= tienda.config.recordatorioDias ? Paleta.arena : Paleta.teal,
+                  // Arena solo si toca hacer seguimiento; si no, ícono neutro.
+                  color: diasEnviada >= tienda.config.recordatorioDias
+                      ? Paleta.arena
+                      : Paleta.tinta.withAlpha(150),
                 ),
               ],
               const TituloSeccion('Detalle'),
@@ -135,28 +139,27 @@ class DetalleCotizacion extends StatelessWidget {
                 relleno: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   children: [
+                    // Renglones en tinta: el acento arena se reserva para el total.
                     for (final i in c.items)
                       FilaDato('${i.descripcion}${i.cantidad > 1 ? '  x${i.cantidad}' : ''}',
-                          formatearPesos(i.subtotal),
-                          colorValor: Paleta.arena),
+                          formatearPesos(i.subtotal)),
                     if (c.descuento > 0)
                       FilaDato('Descuento ${c.descuento}%', '-${formatearPesos(c.valorDescuento)}',
-                          colorValor: Paleta.durazno),
+                          colorValor: Paleta.tinta.withAlpha(170)),
                     if (c.iva) FilaDato('IVA 19%', formatearPesos(c.valorIva)),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total (COP)', style: TextStyle(fontWeight: FontWeight.w700)),
+                  const Expanded(child: EtiquetaSeccion('Total (COP)')),
                   textoPesos(c.total),
                 ],
               ),
               if (c.notas.isNotEmpty) ...[
                 const TituloSeccion('Notas'),
-                Text(c.notas, style: estiloSuave(tamano: 13)),
+                Text(c.notas, style: estiloSuave(tamano: 14)),
               ],
               const TituloSeccion('Cliente'),
               Panel(

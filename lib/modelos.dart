@@ -241,10 +241,13 @@ class Trabajo {
   String hora; // "14:00"
   String lugar;
   String zona;
+  double? lat; // coordenadas del lugar (OpenStreetMap)
+  double? lon;
   int valor;
   List<Pago> pagos;
   bool enCalendar;
   bool invitaCliente;
+  String? eventoId; // id del evento creado en Google Calendar
 
   Trabajo({
     required this.id,
@@ -255,10 +258,13 @@ class Trabajo {
     required this.hora,
     required this.lugar,
     this.zona = '',
+    this.lat,
+    this.lon,
     required this.valor,
     List<Pago>? pagos,
     this.enCalendar = false,
     this.invitaCliente = false,
+    this.eventoId,
   }) : pagos = pagos ?? [];
 
   int get pagado => pagos.fold<int>(0, (a, p) => a + p.monto);
@@ -273,10 +279,13 @@ class Trabajo {
         'hora': hora,
         'lugar': lugar,
         'zona': zona,
+        'lat': lat,
+        'lon': lon,
         'valor': valor,
         'pagos': pagos.map((p) => p.toJson()).toList(),
         'enCalendar': enCalendar,
         'invitaCliente': invitaCliente,
+        'eventoId': eventoId,
       };
 
   factory Trabajo.fromJson(Map<String, dynamic> j) => Trabajo(
@@ -288,6 +297,9 @@ class Trabajo {
         hora: (j['hora'] ?? '08:00') as String,
         lugar: (j['lugar'] ?? '') as String,
         zona: (j['zona'] ?? '') as String,
+        lat: (j['lat'] as num?)?.toDouble(),
+        lon: (j['lon'] as num?)?.toDouble(),
+        eventoId: j['eventoId'] as String?,
         valor: (j['valor'] ?? 0) as int,
         pagos: ((j['pagos'] ?? []) as List)
             .map((e) => Pago.fromJson(e as Map<String, dynamic>))
@@ -304,8 +316,21 @@ class Config {
   int vigenciaDias;
   int recordatorioDias;
   Map<String, bool> integraciones;
+  // Zona base: prioriza lugares cercanos al buscar y da el clima del
+  // Inicio. Sale de "Usar mi ubicación" o se deja la de por defecto.
+  String ciudad;
+  double lat;
+  double lon;
+  // Identidad en los correos: sitio web y logo (imagen PNG pública).
+  String web;
+  String logo;
 
   Config({
+    this.web = 'alexpino.netlify.app',
+    this.logo = 'https://alexpino.netlify.app/assets/img/apple-touch-icon.png',
+    this.ciudad = '', // vacío = aún sin zona (se usan las coordenadas de Medellín)
+    this.lat = 6.2476,
+    this.lon = -75.5658,
     this.negocio = 'Alexander Pino - Realizador audiovisual',
     this.telefono = '',
     this.iva = false,
@@ -322,6 +347,11 @@ class Config {
         'vigenciaDias': vigenciaDias,
         'recordatorioDias': recordatorioDias,
         'integraciones': integraciones,
+        'ciudad': ciudad,
+        'lat': lat,
+        'lon': lon,
+        'web': web,
+        'logo': logo,
       };
 
   factory Config.fromJson(Map<String, dynamic> j) => Config(
@@ -332,6 +362,11 @@ class Config {
         recordatorioDias: (j['recordatorioDias'] ?? 5) as int,
         integraciones: ((j['integraciones'] ?? {}) as Map<String, dynamic>)
             .map((k, v) => MapEntry(k, v as bool)),
+        ciudad: (j['ciudad'] ?? '') as String,
+        lat: ((j['lat'] ?? 6.2476) as num).toDouble(),
+        lon: ((j['lon'] ?? -75.5658) as num).toDouble(),
+        web: (j['web'] ?? 'alexpino.netlify.app') as String,
+        logo: (j['logo'] ?? 'https://alexpino.netlify.app/assets/img/apple-touch-icon.png') as String,
       );
 }
 

@@ -22,13 +22,6 @@ class _PestanaAgendaState extends State<PestanaAgenda> {
   DateTime seleccionado = soloFecha(DateTime.now());
   int semana = 0; // 0 = esta semana, 1 = la siguiente, -1 = la anterior
 
-  static const List<Color> _colores = [
-    Paleta.teal,
-    Paleta.arena,
-    Paleta.durazno,
-    Paleta.petroleo,
-  ];
-
   String _margen(Trabajo a, Trabajo b) {
     final m = minutos(b.hora) - minutos(a.hora);
     if (m < 60) return '$m min entre inicios';
@@ -53,7 +46,8 @@ class _PestanaAgendaState extends State<PestanaAgenda> {
         final mitad = dias[3];
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 112),
+          // Mismos márgenes que el Home.
+          padding: const EdgeInsets.fromLTRB(22, 14, 22, 124),
           children: [
             Row(
               children: [
@@ -66,7 +60,7 @@ class _PestanaAgendaState extends State<PestanaAgenda> {
                 BotonCirculo(Icons.chevron_right, () => setState(() => semana++), tamano: 40),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
             Row(
               children: [
                 for (final d in dias)
@@ -119,9 +113,11 @@ class _PestanaAgendaState extends State<PestanaAgenda> {
                           ),
                         _BloqueTrabajo(
                           t: delDia[i],
+                          // Un solo acento (arena) para todos los bloques;
+                          // terracota solo marca un cruce de agenda (alerta).
                           color: cruces.contains(delDia[i].id)
                               ? Paleta.terracota
-                              : _colores[i % _colores.length],
+                              : Paleta.arena,
                           conflicto: cruces.contains(delDia[i].id),
                           alTocar: () => ir(context, DetalleTrabajo(delDia[i].id)),
                         ),
@@ -174,10 +170,12 @@ class _BloqueTrabajo extends StatelessWidget {
             child: Center(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                // Burbuja de hora neutra: el color queda solo en la rayita
+                // del bloque, para no repetir el acento dos veces.
                 decoration: BoxDecoration(
                   color: Paleta.suelo,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: color.withAlpha(150)),
+                  border: Border.all(color: Colors.white.withAlpha(30)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -221,15 +219,19 @@ class _BloqueTrabajo extends StatelessWidget {
                         child: Text(t.titulo,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                       ),
+                      // Temperatura en tinta tenue (dato secundario, no acento).
                       if (tienda.integracion('clima'))
-                        Text('${climaDe(t.fecha).temperatura}°',
-                            style: estiloDisplay(tamano: 14, color: Paleta.arena)),
+                        Text('${climaTrabajo(t).temperatura}°',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Paleta.tinta.withAlpha(180))),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(tienda.cliente(t.clienteId).nombre, style: estiloSuave(tamano: 12)),
+                  Text(tienda.cliente(t.clienteId).nombre, style: estiloSuave(tamano: 13)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -282,17 +284,16 @@ class _DiaCelda extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 10),
+        // Como la tira semanal del Home: celdas transparentes, el día
+        // elegido en arena (único acento) y "hoy" con un borde suave.
         decoration: BoxDecoration(
-          color: seleccionado ? Paleta.arena : const Color(0xB8101719),
-          borderRadius: BorderRadius.circular(16),
+          color: seleccionado ? Paleta.arena : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: seleccionado
                 ? Colors.transparent
-                : (esHoy ? Paleta.arena.withAlpha(150) : Colors.white.withAlpha(24)),
+                : (esHoy ? Colors.white.withAlpha(40) : Colors.transparent),
           ),
-          boxShadow: seleccionado
-              ? [BoxShadow(color: Paleta.arena.withAlpha(60), blurRadius: 14)]
-              : null,
         ),
         child: Column(
           children: [

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../modelos.dart';
 import '../tema.dart';
@@ -51,9 +52,9 @@ class PestanaInicio extends StatelessWidget {
         if (tienda.integracion('clima')) {
           for (final t in proximos) {
             final dias = soloFecha(t.fecha).difference(soloFecha(DateTime.now())).inDays;
-            if (dias <= 3 && climaDe(t.fecha).riesgoLluvia) {
+            if (dias <= 3 && climaTrabajo(t).riesgoLluvia) {
               avisos.add(Aviso(
-                'Lluvia ${climaDe(t.fecha).lluvia}% el ${fechaCorta(t.fecha)} para "${t.titulo}". Mira el plan B.',
+                'Lluvia ${climaTrabajo(t).lluvia}% el ${fechaCorta(t.fecha)} para "${t.titulo}". Mira el plan B.',
                 icono: Icons.umbrella_outlined,
                 alTocar: () => ir(context, DetalleTrabajo(t.id)),
               ));
@@ -69,61 +70,91 @@ class PestanaInicio extends StatelessWidget {
         final facturable = tienda.cobrado + tienda.porCobrar;
         final double cobradoPct = facturable == 0 ? 0.0 : tienda.cobrado / facturable;
 
+        final saludo = DateTime.now().hour < 12
+            ? 'Buenos días'
+            : (DateTime.now().hour < 19 ? 'Buenas tardes' : 'Buenas noches');
+        final lunes = hoy.subtract(Duration(days: hoy.weekday - 1));
+        final diasConTrabajo = <DateTime>{for (final t in proximos) soloFecha(t.fecha)};
+
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 112),
+          padding: const EdgeInsets.fromLTRB(22, 14, 22, 124),
           children: [
-            // ---- Cabecera: círculo, píldora de resumen, ajustes y avatar ----
+            // ---- Cabecera: saludo y avatar ----
             Row(
               children: [
-                BotonCirculo(Icons.inventory_2_outlined,
-                    () => ir(context, const PantallaCatalogo())),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: PildoraOscura(
-                    '${abiertas.length} cotizaciones abiertas',
-                    icono: Icons.description_outlined,
-                    sobreHero: false,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(saludo,
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.w700, height: 1.1)),
+                      const SizedBox(height: 4),
+                      Text('${nombreDia(hoy)} ${hoy.day} de ${mesesLargos[hoy.month - 1]}',
+                          style: estiloSuave(tamano: 14)),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                BotonCirculo(Icons.settings_outlined, () => ir(context, const PantallaAjustes())),
-                const SizedBox(width: 8),
-                const Ficha('A', tamano: 42, redonda: true),
+                GestureDetector(
+                  onTap: () => ir(context, const PantallaAjustes()),
+                  child: const Ficha('A', tamano: 46, redonda: true),
+                ),
               ],
             ),
-            const SizedBox(height: 26),
-            Text(
-              '${nombreDia(hoy)} ${hoy.day} ${mesesLargos[hoy.month - 1]} ${hoy.year}',
-              style: estiloSuave(tamano: 13),
-            ),
-            const SizedBox(height: 8),
-            Text('Cotiza, agenda', style: estiloDisplay(tamano: 28)),
-            Text('y cobra hoy', style: estiloDisplay(tamano: 28, color: Paleta.arena)),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
 
-            // ---- Tarjeta hero: el próximo rodaje ----
+            // ---- Semana ----
+            Row(
+              children: [
+                for (var i = 0; i < 7; i++)
+                  _DiaSemana(
+                    fecha: lunes.add(Duration(days: i)),
+                    esHoy: lunes.add(Duration(days: i)) == hoy,
+                    conTrabajo: diasConTrabajo.contains(lunes.add(Duration(days: i))),
+                    alTocar: () => pestana.value = 2,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 22),
+
+            // ---- Próximo rodaje ----
             if (siguiente == null)
-              TarjetaHero(
+              TarjetaSuave(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Sin rodajes próximos',
-                        style: estiloDisplay(tamano: 18, color: Paleta.suelo)),
+                    const EtiquetaSeccion('Próximo rodaje'),
+                    const SizedBox(height: 10),
+                    const Text('Sin rodajes próximos',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
                     Text('Agenda un trabajo desde una cotización aceptada.',
-                        style: TextStyle(color: Paleta.suelo.withAlpha(190), fontSize: 13)),
+                        style: estiloSuave(tamano: 14)),
                     const SizedBox(height: 18),
-                    BotonPildora('Agendar', () => ir(context, const PantallaAgendar()),
-                        icono: Icons.event_outlined),
+                    BotonArena('Agendar', () => ir(context, const PantallaAgendar())),
                   ],
                 ),
               )
             else
-              TarjetaHero(
+              TarjetaSuave(
                 alTocar: () => ir(context, DetalleTrabajo(siguiente.id)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        const EtiquetaSeccion('Próximo rodaje'),
+                        const Spacer(),
+                        Text(
+                          diasFalta <= 0
+                              ? 'Hoy'
+                              : (diasFalta == 1 ? 'Mañana' : 'En $diasFalta días'),
+                          style: const TextStyle(
+                              color: Paleta.arena, fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -131,117 +162,108 @@ class PestanaInicio extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('PRÓXIMO RODAJE',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.4,
-                                      color: Paleta.suelo.withAlpha(170))),
-                              const SizedBox(height: 8),
                               Text(siguiente.titulo,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: estiloDisplay(tamano: 17, color: Paleta.suelo)),
+                                  style: const TextStyle(
+                                      fontSize: 22, fontWeight: FontWeight.w700, height: 1.15)),
                               const SizedBox(height: 4),
                               Text(tienda.cliente(siguiente.clienteId).nombre,
-                                  style: TextStyle(
-                                      color: Paleta.suelo.withAlpha(190), fontSize: 13)),
+                                  style: estiloSuave(tamano: 14)),
                             ],
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Column(
-                          children: [
-                            Text(diasFalta <= 0 ? 'HOY' : '$diasFalta',
-                                style: estiloDisplay(
-                                    tamano: diasFalta <= 0 ? 26 : 46, color: Paleta.suelo)),
-                            if (diasFalta > 0)
-                              Text(diasFalta == 1 ? 'día' : 'días',
-                                  style: TextStyle(
-                                      color: Paleta.suelo.withAlpha(190),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12)),
-                          ],
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle, color: Colors.white.withAlpha(16)),
+                          child: const Icon(Icons.arrow_outward, size: 18, color: Paleta.tinta),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        PildoraOscura('${fechaCorta(siguiente.fecha)} · ${hora12(siguiente.hora)}',
-                            icono: Icons.schedule),
-                        PildoraOscura(siguiente.lugar, icono: Icons.place_outlined),
-                        if (tienda.integracion('clima'))
-                          PildoraOscura(
-                            '${climaDe(siguiente.fecha).temperatura}° ${climaDe(siguiente.fecha).descripcion}',
-                            icono: climaDe(siguiente.fecha).icono,
-                          ),
-                      ],
-                    ),
                     const SizedBox(height: 18),
-                    BotonPildora('Ver rodaje', () => ir(context, DetalleTrabajo(siguiente.id)),
-                        icono: Icons.arrow_outward),
+                    DatoLinea(Icons.schedule,
+                        '${fechaCorta(siguiente.fecha)} · ${hora12(siguiente.hora)}'),
+                    const SizedBox(height: 8),
+                    DatoLinea(Icons.place_outlined, siguiente.lugar),
+                    if (tienda.integracion('clima')) ...[
+                      const SizedBox(height: 8),
+                      DatoLinea(climaTrabajo(siguiente).icono,
+                          '${climaTrabajo(siguiente).temperatura}° ${climaTrabajo(siguiente).descripcion}'),
+                    ],
                   ],
                 ),
               ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 30),
 
-            // ---- Acciones rápidas ----
+            // ---- Atajos ----
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                AccionRapida(Icons.add_circle_outline, 'Cotizar',
-                    () => ir(context, const NuevaCotizacion()),
-                    resaltada: true),
-                AccionRapida(Icons.event_outlined, 'Agendar',
+                Atajo(Icons.add, 'Cotizar', () => ir(context, const NuevaCotizacion()),
+                    principal: true),
+                Atajo(Icons.event_outlined, 'Agendar',
                     () => ir(context, const PantallaAgendar())),
-                AccionRapida(Icons.inventory_2_outlined, 'Catálogo',
+                Atajo(Icons.inventory_2_outlined, 'Catálogo',
                     () => ir(context, const PantallaCatalogo())),
-                AccionRapida(Icons.people_outline, 'Clientes', () => pestana.value = 4),
+                Atajo(Icons.people_outline, 'Clientes', () => pestana.value = 4),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 34),
 
-            // ---- Progreso de cobro (referente "Today's Progress") ----
-            Panel(
-              relleno: const EdgeInsets.all(18),
-              alTocar: () => pestana.value = 3,
+            // ---- Progreso de cobro: anillo central ----
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => pestana.value = 3,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Expanded(
-                        child: Text('Progreso de cobro',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                      ),
-                      PildoraOscura('${mesAbreviado(hoy)} ${hoy.year}', sobreHero: false),
+                      const EtiquetaSeccion('Progreso de cobro'),
+                      const Spacer(),
+                      Text('${mesAbreviado(hoy)} ${hoy.year}', style: estiloSuave(tamano: 13)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: Text(
-                          '${pesosCortos(tienda.cobrado)} de ${pesosCortos(facturable)}',
-                          style: estiloSuave(tamano: 13),
+                        child: CifraLado('Por cobrar', pesosCortos(tienda.porCobrar)),
+                      ),
+                      SizedBox(
+                        width: 156,
+                        height: 156,
+                        child: CustomPaint(
+                          painter: _PintorAnillo(cobradoPct),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('${(cobradoPct * 100).round()}%',
+                                    style: estiloDisplay(tamano: 30)),
+                                const SizedBox(height: 4),
+                                Text('cobrado', style: estiloSuave(tamano: 13)),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      Text('${(cobradoPct * 100).round()}%',
-                          style: estiloDisplay(tamano: 22)),
+                      Expanded(
+                        child: CifraLado('Cobrado', pesosCortos(tienda.cobrado)),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  BarraBrillante(cobradoPct),
                 ],
               ),
             ),
             if (avisos.isNotEmpty) ...[
+              const SizedBox(height: 10),
               const TituloSeccion('Requiere tu atención'),
               ...avisos,
             ],
+            const SizedBox(height: 6),
             TituloSeccion('Pendientes', accion: 'Ver todo', alAccion: () => pestana.value = 1),
             if (abiertas.isEmpty)
               const Vacio('Todo al día', 'No hay cotizaciones abiertas.')
@@ -253,4 +275,92 @@ class PestanaInicio extends StatelessWidget {
       },
     );
   }
+}
+
+// ======================================================================
+// Piezas propias del Home. TarjetaSuave, EtiquetaSeccion, DatoLinea,
+// Atajo, CifraLado y BotonArena ahora son públicas (estilo.dart) para
+// que el resto de pantallas use exactamente el mismo diseño.
+// ======================================================================
+
+class _DiaSemana extends StatelessWidget {
+  final DateTime fecha;
+  final bool esHoy;
+  final bool conTrabajo;
+  final VoidCallback alTocar;
+  const _DiaSemana(
+      {required this.fecha,
+      required this.esHoy,
+      required this.conTrabajo,
+      required this.alTocar});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: alTocar,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: esHoy ? Colors.white.withAlpha(18) : Colors.transparent,
+            border: Border.all(color: esHoy ? Colors.white.withAlpha(40) : Colors.transparent),
+          ),
+          child: Column(
+            children: [
+              Text(nombreDia(fecha),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Paleta.tinta.withAlpha(esHoy ? 200 : 120))),
+              const SizedBox(height: 8),
+              Text('${fecha.day}',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: esHoy ? Paleta.tinta : Paleta.tinta.withAlpha(150))),
+              const SizedBox(height: 7),
+              Container(
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: conTrabajo ? Paleta.arena : Colors.transparent,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PintorAnillo extends CustomPainter {
+  final double valor;
+  _PintorAnillo(this.valor);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centro = size.center(Offset.zero);
+    final radio = size.width / 2 - 6;
+    final pista = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..color = Paleta.tinta.withAlpha(26);
+    canvas.drawCircle(centro, radio, pista);
+    final v = valor.clamp(0.0, 1.0).toDouble();
+    if (v > 0) {
+      final arco = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round
+        ..color = Paleta.arena;
+      canvas.drawArc(Rect.fromCircle(center: centro, radius: radio), -math.pi / 2,
+          2 * math.pi * v, false, arco);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PintorAnillo anterior) => anterior.valor != valor;
 }

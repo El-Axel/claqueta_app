@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' show LatLng;
+import 'package:url_launcher/url_launcher.dart';
 import 'modelos.dart';
+import 'servicios/lugares_api.dart';
 import 'tema.dart';
 import 'tienda.dart';
 import 'util.dart';
@@ -14,8 +18,10 @@ import 'estilo.dart';
 Future<T?> ir<T>(BuildContext context, Widget pantalla) =>
     Navigator.push<T>(context, MaterialPageRoute(builder: (_) => pantalla));
 
-/// Tarjeta oscura con borde fino: el bloque básico de todas las pantallas.
-/// - color: la tiñe (por ejemplo para un resalte).
+/// Tarjeta suave: el bloque básico de todas las pantallas. Usa la misma
+/// decoración que TarjetaSuave del Home (decoracionSuave), así todas las
+/// pantallas heredan el estilo limpio sin reescribirlas.
+/// - color: la tiñe apenas (resalte), sin degradados.
 class Panel extends StatelessWidget {
   final Widget child;
   final EdgeInsets relleno;
@@ -26,30 +32,18 @@ class Panel extends StatelessWidget {
   const Panel({
     super.key,
     required this.child,
-    this.relleno = const EdgeInsets.all(16),
+    this.relleno = const EdgeInsets.all(18),
     this.alTocar,
     this.color,
-    this.radio = 26,
+    this.radio = 24,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tinte = color;
     final caja = Container(
       width: double.infinity,
       padding: relleno,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radio),
-        color: tinte == null ? const Color(0xB8101719) : null,
-        gradient: tinte == null
-            ? null
-            : LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [tinte.withAlpha(120), tinte.withAlpha(50)],
-              ),
-        border: Border.all(color: Colors.white.withAlpha(tinte == null ? 26 : 34)),
-      ),
+      decoration: decoracionSuave(radio: radio, tinte: color),
       child: child,
     );
     if (alTocar == null) return caja;
@@ -66,12 +60,12 @@ class Etiqueta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Píldora sin borde duro: solo un velo del color, como en el Home.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withAlpha(34),
+        color: color.withAlpha(30),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withAlpha(80)),
       ),
       child: Text(
         texto,
@@ -94,21 +88,21 @@ class BotonClaqueta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Estilo limpio: sin sombras. El primario es arena sólido (el único
+    // acento); el secundario usa el mismo vidrio suave de las tarjetas;
+    // peligro solo tiñe el texto y un borde tenue (no un bloque rojo).
     Color letra = Paleta.suelo;
     Color? borde;
-    Color? brillo;
     Color fondo = Paleta.arena;
 
     if (tipo == 'secundario') {
       letra = Paleta.tinta;
-      fondo = Colors.white.withAlpha(12);
-      borde = Colors.white.withAlpha(40);
+      fondo = Colors.white.withAlpha(alfaFondoSuave);
+      borde = Colors.white.withAlpha(alfaBordeSuave);
     } else if (tipo == 'peligro') {
       letra = Paleta.terracota;
-      fondo = Paleta.terracota.withAlpha(22);
-      borde = Paleta.terracota.withAlpha(120);
-    } else {
-      brillo = Paleta.arena;
+      fondo = Colors.white.withAlpha(8);
+      borde = Paleta.terracota.withAlpha(70);
     }
 
     final activo = onPressed != null;
@@ -117,15 +111,12 @@ class BotonClaqueta extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: Ink(
-          height: 56,
+          height: 54,
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
             color: fondo,
-            border: borde == null ? null : Border.all(color: borde, width: 1.2),
-            boxShadow: brillo == null || !activo
-                ? null
-                : [BoxShadow(color: brillo.withAlpha(45), blurRadius: 20, offset: const Offset(0, 8))],
+            border: borde == null ? null : Border.all(color: borde),
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(30),
@@ -157,7 +148,8 @@ class BotonClaqueta extends StatelessWidget {
   }
 }
 
-/// Título grande (Krona One) con subtítulo opcional
+/// Título de pantalla con subtítulo opcional. Igual que el saludo del
+/// Home: Figtree grande en negrita (Krona One queda para cifras/marca).
 class Encabezado extends StatelessWidget {
   final String titulo;
   final String? subtitulo;
@@ -169,19 +161,20 @@ class Encabezado extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(titulo, style: estiloDisplay(tamano: 21)),
+        Text(titulo, style: estiloTituloPantalla()),
         if (subtitulo != null)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(subtitulo!, style: estiloSuave(tamano: 13)),
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(subtitulo!, style: estiloSuave(tamano: 14)),
           ),
       ],
     );
   }
 }
 
-/// Título de sección: texto en negrita a la izquierda y, si quieres, un enlace
-/// ("Ver todo") a la derecha, como en los referentes.
+/// Título de sección: etiqueta pequeña en mayúsculas (EtiquetaSeccion,
+/// la misma del Home) y, si quieres, un enlace ("Ver todo") en arena.
+/// Así todas las secciones de la app se ven iguales.
 class TituloSeccion extends StatelessWidget {
   final String texto;
   final String? accion;
@@ -192,19 +185,16 @@ class TituloSeccion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 26, bottom: 12),
+      padding: const EdgeInsets.only(top: 30, bottom: 14),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              texto,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-          ),
+          Expanded(child: EtiquetaSeccion(texto)),
           if (accion != null)
             GestureDetector(
               onTap: alAccion,
-              child: Text(accion!, style: estiloSuave(tamano: 13)),
+              child: Text(accion!,
+                  style: const TextStyle(
+                      color: Paleta.arena, fontSize: 13, fontWeight: FontWeight.w700)),
             ),
         ],
       ),
@@ -233,15 +223,18 @@ class FilaItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fila suave: mismo vidrio que las tarjetas del Home, más aire
+    // (relleno 14) y textos con la jerarquía del Home (título 15, resto tenue).
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Panel(
-        relleno: const EdgeInsets.all(12),
+        relleno: const EdgeInsets.all(14),
+        radio: 22,
         alTocar: alTocar,
         child: Row(
           children: [
-            Ficha(inicialDe(titulo), tamano: 48),
-            const SizedBox(width: 12),
+            Ficha(inicialDe(titulo), tamano: 44),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,9 +242,10 @@ class FilaItem extends StatelessWidget {
                   Text(titulo,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(height: 2),
                   Text(subtitulo,
-                      maxLines: 1, overflow: TextOverflow.ellipsis, style: estiloSuave()),
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: estiloSuave(tamano: 13)),
                 ],
               ),
             ),
@@ -261,9 +255,9 @@ class FilaItem extends StatelessWidget {
               children: [
                 if (derecha.isNotEmpty)
                   Text(derecha,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                 if (derecha2 != null)
-                  Text(derecha2!, style: estiloSuave(tamano: 11)),
+                  Text(derecha2!, style: estiloSuave(tamano: 12)),
                 if (extra != null) ...[const SizedBox(height: 4), extra!],
               ],
             ),
@@ -305,7 +299,7 @@ class FilaTrabajo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final verClima = tienda.integracion('clima');
-    final clima = climaDe(t.fecha);
+    final clima = climaTrabajo(t);
     return FilaItem(
       titulo: t.titulo,
       subtitulo: '${fechaCorta(t.fecha)} · ${hora12(t.hora)} · ${t.lugar}',
@@ -328,21 +322,21 @@ class FilaDato extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      // Más aire entre renglones y etiqueta tenue, como los datos del Home.
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(
-            child: Text(etiqueta,
-                style: TextStyle(color: Paleta.tinta.withAlpha(178), fontSize: 13)),
+            child: Text(etiqueta, style: estiloSuave(tamano: 13.5)),
           ),
           const SizedBox(width: 16),
           Flexible(
             child: Text(valor,
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                    color: colorValor, fontWeight: FontWeight.w600, fontSize: 13)),
+                    color: colorValor, fontWeight: FontWeight.w600, fontSize: 13.5)),
           ),
         ],
       ),
@@ -359,19 +353,16 @@ class Vacio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Misma tarjeta suave del Home; el texto manda, no el borde.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: Colors.white.withAlpha(8),
-        border: Border.all(color: Colors.white.withAlpha(36)),
-      ),
+      decoration: decoracionSuave(radio: 24),
       child: Column(
         children: [
-          Text(titulo, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          Text(texto, textAlign: TextAlign.center, style: estiloSuave(tamano: 13)),
+          Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          const SizedBox(height: 6),
+          Text(texto, textAlign: TextAlign.center, style: estiloSuave(tamano: 13.5)),
         ],
       ),
     );
@@ -394,24 +385,23 @@ class Aviso extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: GestureDetector(
         onTap: alTocar,
+        // Estilo limpio: tarjeta suave neutra; el color del aviso solo va en
+        // el ícono, así varios avisos juntos no llenan la pantalla de color.
         child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withAlpha(30),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color.withAlpha(90)),
-          ),
+          padding: const EdgeInsets.all(14),
+          decoration: decoracionSuave(radio: 20),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icono, color: color, size: 18),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(texto,
                     style: TextStyle(
-                        color: color, fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.35)),
+                        color: Paleta.tinta.withAlpha(220), fontSize: 13, height: 1.35)),
               ),
-              if (alTocar != null) Icon(Icons.chevron_right, color: color, size: 18),
+              if (alTocar != null)
+                Icon(Icons.chevron_right, color: Paleta.tinta.withAlpha(120), size: 18),
             ],
           ),
         ),
@@ -443,8 +433,9 @@ class Cantidad extends StatelessWidget {
         height: 32,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withAlpha(accion == null ? 8 : 18),
-          border: Border.all(color: Colors.white.withAlpha(accion == null ? 24 : 70)),
+          // Bordes suaves (antes 70): el botón se nota sin cortar la tarjeta.
+          color: Colors.white.withAlpha(accion == null ? 8 : 16),
+          border: Border.all(color: Colors.white.withAlpha(accion == null ? 18 : 40)),
         ),
         child: Icon(icono, size: 18, color: accion == null ? Paleta.tinta.withAlpha(70) : Paleta.tinta),
       ),
@@ -499,6 +490,11 @@ class LineaEstado extends StatelessWidget {
     int actual = 0;
     if (estado == estEnviada) actual = 1;
     if (estado == estAceptada || estado == estRechazada) actual = 2;
+    // Un solo acento: los pasos cumplidos van en arena (antes teal);
+    // terracota solo si terminó en rechazo. Los pendientes, casi invisibles.
+    Color colorPaso(int i) => i <= actual
+        ? (pasos[i] == 'Rechazada' ? Paleta.terracota : Paleta.arena)
+        : Colors.white.withAlpha(26);
     return Row(
       children: [
         for (int i = 0; i < pasos.length; i++)
@@ -509,21 +505,20 @@ class LineaEstado extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    height: 3,
-                    color: i <= actual
-                        ? (pasos[i] == 'Rechazada' ? Paleta.terracota : Paleta.teal)
-                        : Paleta.petroleo,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: colorPaso(i),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     pasos[i].toUpperCase(),
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                      color: i <= actual
-                          ? (pasos[i] == 'Rechazada' ? Paleta.terracota : Paleta.teal)
-                          : Paleta.tinta.withAlpha(100),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.1,
+                      color: i <= actual ? colorPaso(i) : Paleta.tinta.withAlpha(100),
                     ),
                   ),
                 ],
@@ -535,10 +530,13 @@ class LineaEstado extends StatelessWidget {
   }
 }
 
-/// Tarjeta de clima (simulado; en la versión final lo da Google Weather).
+/// Tarjeta de clima: pronóstico real de Open-Meteo (próximos 16 días)
+/// o estimado si no hay conexión / la fecha es lejana.
 class TarjetaClima extends StatelessWidget {
   final DateTime fecha;
-  const TarjetaClima(this.fecha, {super.key});
+  final double? lat;
+  final double? lon;
+  const TarjetaClima(this.fecha, {super.key, this.lat, this.lon});
 
   @override
   Widget build(BuildContext context) {
@@ -551,7 +549,7 @@ class TarjetaClima extends StatelessWidget {
         ]),
       );
     }
-    final c = climaDe(fecha);
+    final c = climaDe(fecha, lat: lat, lon: lon);
     return Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,17 +562,24 @@ class TarjetaClima extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Figtree en negrita, como los títulos de las tarjetas del Home.
                     Text('${c.temperatura}° · ${c.descripcion}',
-                        style: estiloDisplay(tamano: 15)),
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                     Text(fechaLarga(fecha), style: estiloSuave()),
                   ],
                 ),
               ),
-              const Etiqueta('Weather', color: Paleta.arena),
+              Etiqueta(c.real ? 'Pronóstico' : 'Estimado',
+                  color: c.real ? Paleta.arena : Paleta.tinta.withAlpha(150)),
             ],
           ),
           const SizedBox(height: 10),
           Text('Lluvia ${c.lluvia}%   ·   Viento ${c.viento} km/h', style: estiloSuave(tamano: 13)),
+          if (!c.real) ...[
+            const SizedBox(height: 4),
+            Text('El pronóstico real llega hasta 16 días antes (Open-Meteo).',
+                style: estiloSuave(tamano: 11)),
+          ],
           if (c.riesgoLluvia) ...[
             const SizedBox(height: 10),
             const Aviso(
@@ -588,7 +593,119 @@ class TarjetaClima extends StatelessWidget {
   }
 }
 
-/// Mapa dibujado con código (en la versión final lo da Google Maps).
+/// Mapa del lugar. Con coordenadas: mapa real de OpenStreetMap con
+/// botón para abrir la ruta en Google Maps. Sin coordenadas: dibujo
+/// de referencia (mientras eliges una dirección).
+class MapaLugar extends StatelessWidget {
+  final String lugar;
+  final String zona;
+  final double? lat;
+  final double? lon;
+
+  const MapaLugar(this.lugar, {super.key, this.zona = '', this.lat, this.lon});
+
+  Future<void> _abrirMaps(BuildContext context) async {
+    var ok = false;
+    try {
+      ok = await launchUrl(enlaceGoogleMaps(lat!, lon!),
+          mode: LaunchMode.externalApplication);
+    } catch (_) {}
+    if (!ok && context.mounted) mostrarAviso(context, 'No se pudo abrir Google Maps');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!tienda.integracion('maps') || lat == null || lon == null) {
+      return MapaSimulado(lugar, zona: zona);
+    }
+    final punto = LatLng(lat!, lon!);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 170,
+        width: double.infinity,
+        child: Stack(
+          children: [
+            FlutterMap(
+              key: ValueKey('$lat,$lon'),
+              options: MapOptions(
+                initialCenter: punto,
+                initialZoom: 15,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.claqueta',
+                ),
+                MarkerLayer(markers: [
+                  Marker(
+                    point: punto,
+                    width: 40,
+                    height: 40,
+                    child: const Icon(Icons.location_on, color: Paleta.terracota, size: 40),
+                  ),
+                ]),
+              ],
+            ),
+            Positioned(
+              left: 10,
+              bottom: 10,
+              right: 10,
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Paleta.suelo.withAlpha(220),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        zona.isEmpty ? lugar : '$lugar · $zona',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: Paleta.arena,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => _abrirMaps(context),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.directions, size: 14, color: Paleta.suelo),
+                          SizedBox(width: 4),
+                          Text('Cómo llegar',
+                              style: TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.w800, color: Paleta.suelo)),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 6,
+              right: 8,
+              child: Text('© OpenStreetMap',
+                  style: TextStyle(fontSize: 9, color: Colors.black.withAlpha(160))),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mapa dibujado con código: se usa mientras no hay coordenadas.
 class MapaSimulado extends StatelessWidget {
   final String lugar;
   final String zona;
@@ -713,10 +830,12 @@ class _PintorMapa extends CustomPainter {
 }
 
 /// Decoración común de los campos de texto: píldora oscura con borde fino.
+/// Mismo relleno y borde que las tarjetas suaves, para que los
+/// formularios se vean de la misma familia que el Home.
 InputDecoration decoracionCampo(String etiqueta, {String? ayuda, Widget? icono}) {
   final OutlineInputBorder borde = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(26),
-    borderSide: BorderSide(color: Colors.white.withAlpha(34)),
+    borderRadius: BorderRadius.circular(22),
+    borderSide: BorderSide(color: Colors.white.withAlpha(alfaBordeSuave)),
   );
   return InputDecoration(
     labelText: etiqueta,
@@ -727,12 +846,15 @@ InputDecoration decoracionCampo(String etiqueta, {String? ayuda, Widget? icono})
             data: IconThemeData(size: 20, color: Paleta.tinta.withAlpha(190)),
             child: icono,
           ),
+    labelStyle: TextStyle(color: Paleta.tinta.withAlpha(150)),
+    hintStyle: TextStyle(color: Paleta.tinta.withAlpha(90)),
     filled: true,
-    fillColor: const Color(0xB8101719),
+    fillColor: Colors.white.withAlpha(alfaFondoSuave),
     border: borde,
     enabledBorder: borde,
+    disabledBorder: borde,
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(26),
+      borderRadius: BorderRadius.circular(22),
       borderSide: const BorderSide(color: Paleta.arena, width: 1.5),
     ),
   );
@@ -806,10 +928,10 @@ Future<T?> hojaInferior<T>(BuildContext context, Widget Function(BuildContext) c
     builder: (ctx) => Container(
       decoration: BoxDecoration(
         color: const Color(0xFF121A1C),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        border: Border(top: BorderSide(color: Colors.white.withAlpha(34))),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(radioTarjeta)),
+        border: Border(top: BorderSide(color: Colors.white.withAlpha(alfaBordeSuave))),
       ),
-      padding: EdgeInsets.fromLTRB(20, 10, 20, 22 + MediaQuery.of(ctx).viewInsets.bottom),
+      padding: EdgeInsets.fromLTRB(22, 10, 22, 24 + MediaQuery.of(ctx).viewInsets.bottom),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -844,23 +966,27 @@ Future<bool> confirmar(
 }) async {
   final r = await showDialog<bool>(
     context: context,
+    // Mismo fondo oscuro de las hojas inferiores, radio de tarjeta y la
+    // acción en arena (o terracota si es peligrosa): un solo acento.
     builder: (ctx) => AlertDialog(
-      backgroundColor: Paleta.panel2.withAlpha(245),
+      backgroundColor: const Color(0xFF121A1C),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: Colors.white.withAlpha(50)),
+        borderRadius: BorderRadius.circular(radioTarjeta),
+        side: BorderSide(color: Colors.white.withAlpha(alfaBordeSuave)),
       ),
-      title: Text(titulo),
-      content: Text(mensaje),
+      title: Text(titulo, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+      content: Text(mensaje, style: TextStyle(color: Paleta.tinta.withAlpha(200), height: 1.35)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancelar'),
+          child: Text('Cancelar', style: TextStyle(color: Paleta.tinta.withAlpha(170))),
         ),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(boton,
-              style: TextStyle(color: peligro ? Paleta.terracota : Paleta.teal)),
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: peligro ? Paleta.terracota : Paleta.arena)),
         ),
       ],
     ),
@@ -901,8 +1027,9 @@ class Pagina extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Márgenes laterales de 22, los mismos del Home.
     return ListView(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, conBarraInferior ? 28 : 40),
+      padding: EdgeInsets.fromLTRB(22, 12, 22, conBarraInferior ? 28 : 40),
       children: hijos,
     );
   }

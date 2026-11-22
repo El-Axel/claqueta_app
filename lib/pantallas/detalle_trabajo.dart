@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../compartir.dart';
+import '../servicios/google_api.dart';
 import '../modelos.dart';
 import '../tema.dart';
 import '../tienda.dart';
@@ -33,15 +35,18 @@ class DetalleTrabajo extends StatelessWidget {
         final cruces = tienda.conflictosPara(t.fecha, t.hora, ignorarId: t.id);
         final hoy = soloFecha(DateTime.now());
         final futuro = !soloFecha(t.fecha).isBefore(hoy);
-        final planB = futuro && tienda.integracion('clima') && climaDe(t.fecha).riesgoLluvia
+        final coords = coordenadasTrabajo(t);
+        final planB = futuro && tienda.integracion('clima') && climaTrabajo(t).riesgoLluvia
             ? tienda.alternativas(t.fecha, t.hora, ignorarId: t.id)
             : <DateTime>[];
 
+        // Estilo limpio: "Pagado" lleva el acento arena (lo logrado);
+        // "Pendiente" queda neutro y "Parcial" en durazno (en camino).
         String estadoPago = 'Pendiente';
-        Color colorPago = Paleta.arena;
+        Color colorPago = Paleta.tinta.withAlpha(170);
         if (t.valor > 0 && t.pagado >= t.valor) {
           estadoPago = 'Pagado';
-          colorPago = Paleta.teal;
+          colorPago = Paleta.arena;
         } else if (t.pagado > 0) {
           estadoPago = 'Parcial';
           colorPago = Paleta.durazno;
@@ -50,23 +55,26 @@ class DetalleTrabajo extends StatelessWidget {
         return Lienzo(
           appBar: barra('Trabajo'),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+            padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
             children: [
-              Text(t.titulo, style: estiloDisplay(tamano: 18)),
+              // Título como el del Home (Figtree en negrita, no Krona).
+              Text(t.titulo, style: estiloTituloPantalla()),
               const SizedBox(height: 4),
-              Text('${fechaLarga(t.fecha)} · ${hora12(t.hora)}', style: estiloSuave(tamano: 13)),
-              const SizedBox(height: 12),
+              Text('${fechaLarga(t.fecha)} · ${hora12(t.hora)}', style: estiloSuave(tamano: 14)),
+              const SizedBox(height: 14),
+              // Etiquetas neutras; solo "En Calendar" lleva el acento arena.
               Wrap(
                 spacing: 8,
                 runSpacing: 6,
                 children: [
-                  Etiqueta(futuro ? 'Confirmado' : 'Realizado'),
+                  Etiqueta(futuro ? 'Confirmado' : 'Realizado', color: Paleta.tinta.withAlpha(190)),
                   Etiqueta(t.enCalendar ? 'En Calendar' : 'Sin Calendar',
-                      color: t.enCalendar ? Paleta.arena : Paleta.petroleo),
-                  if (t.invitaCliente) const Etiqueta('Cliente invitado', color: Paleta.durazno),
+                      color: t.enCalendar ? Paleta.arena : Paleta.tinta.withAlpha(150)),
+                  if (t.invitaCliente)
+                    Etiqueta('Cliente invitado', color: Paleta.tinta.withAlpha(190)),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
               Panel(
                 relleno: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
@@ -87,9 +95,9 @@ class DetalleTrabajo extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              MapaSimulado(t.lugar, zona: t.zona),
+              MapaLugar(t.lugar, zona: t.zona, lat: coords?.$1, lon: coords?.$2),
               const SizedBox(height: 12),
-              TarjetaClima(t.fecha),
+              TarjetaClima(t.fecha, lat: coords?.$1, lon: coords?.$2),
               if (planB.isNotEmpty) ...[
                 const TituloSeccion('Plan B por lluvia'),
                 Text('Fechas cercanas con poca lluvia y sin cruces:', style: estiloSuave(tamano: 13)),
@@ -100,10 +108,13 @@ class DetalleTrabajo extends StatelessWidget {
                   children: [
                     for (final d in planB)
                       ActionChip(
-                        avatar: Icon(climaDe(d).icono, size: 16, color: Paleta.arena),
-                        label: Text('${fechaCorta(d)} · ${climaDe(d).temperatura}°'),
-                        backgroundColor: Colors.white.withAlpha(18),
-                        side: BorderSide(color: Colors.white.withAlpha(50)),
+                        avatar: Icon(climaDe(d, lat: coords?.$1, lon: coords?.$2).icono,
+                            size: 16, color: Paleta.arena),
+                        label: Text(
+                            '${fechaCorta(d)} · ${climaDe(d, lat: coords?.$1, lon: coords?.$2).temperatura}°'),
+                        // Chip con el vidrio suave de las tarjetas.
+                        backgroundColor: Colors.white.withAlpha(13),
+                        side: BorderSide(color: Colors.white.withAlpha(22)),
                         labelStyle: const TextStyle(fontWeight: FontWeight.w700),
                         onPressed: () => _reprogramar(context, t, d),
                       ),
@@ -121,7 +132,7 @@ class DetalleTrabajo extends StatelessWidget {
                         Flexible(
                           child: Text(
                             '${formatearPesos(t.pagado)} de ${formatearPesos(t.valor)}',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                           ),
                         ),
                         Etiqueta(estadoPago, color: colorPago),
@@ -133,10 +144,10 @@ class DetalleTrabajo extends StatelessWidget {
                     if (t.pagos.isEmpty)
                       Text('Aún no hay pagos registrados.', style: estiloSuave(tamano: 13))
                     else
+                      // Pagos en tinta: el acento queda para la barra de progreso.
                       for (final p in t.pagos)
                         FilaDato('${p.tipo} · ${p.metodo} · ${fechaCorta(p.fecha)}',
-                            formatearPesos(p.monto),
-                            colorValor: Paleta.arena),
+                            formatearPesos(p.monto)),
                   ],
                 ),
               ),
@@ -158,8 +169,7 @@ class DetalleTrabajo extends StatelessWidget {
                     tipo: 'secundario', icono: Icons.description_outlined),
               ],
               const SizedBox(height: 10),
-              BotonClaqueta('Abrir en Calendar', () =>
-                  mostrarAviso(context, 'Simulado: se abre el evento en Google Calendar'),
+              BotonClaqueta('Abrir en Calendar', () => _abrirCalendar(context, t),
                   tipo: 'secundario', icono: Icons.event_outlined),
               const SizedBox(height: 10),
               BotonClaqueta('Cancelar trabajo', () => _cancelar(context, t),
@@ -181,8 +191,28 @@ class DetalleTrabajo extends StatelessWidget {
     if (ok) {
       t.fecha = nueva;
       tienda.guardarTrabajo(t);
-      if (context.mounted) mostrarAviso(context, 'Rodaje reprogramado para el ${fechaCorta(nueva)}');
+      var aviso = 'Rodaje reprogramado para el ${fechaCorta(nueva)}';
+      if (t.eventoId != null && servicioGoogle.conectado) {
+        try {
+          await servicioGoogle.actualizarEvento(t.eventoId!, t);
+          aviso += ' (Calendar actualizado)';
+        } catch (e) {
+          aviso += ', pero Calendar no se actualizó';
+        }
+      }
+      if (context.mounted) mostrarAviso(context, aviso);
     }
+  }
+
+  /// Abre Google Calendar en el día del rodaje (web o app).
+  Future<void> _abrirCalendar(BuildContext context, Trabajo t) async {
+    final f = t.fecha;
+    final url = Uri.parse('https://calendar.google.com/calendar/r/day/${f.year}/${f.month}/${f.day}');
+    var ok = false;
+    try {
+      ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+    if (!ok && context.mounted) mostrarAviso(context, 'No se pudo abrir Google Calendar');
   }
 
   Future<void> _cancelar(BuildContext context, Trabajo t) async {
@@ -195,8 +225,21 @@ class DetalleTrabajo extends StatelessWidget {
       peligro: true,
     );
     if (ok && context.mounted) {
+      final eventoId = t.eventoId;
       tienda.eliminarTrabajo(t.id);
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
+      if (eventoId != null && servicioGoogle.conectado) {
+        try {
+          await servicioGoogle.eliminarEvento(eventoId);
+          messenger.showSnackBar(const SnackBar(content: Text('Trabajo cancelado y evento borrado de Calendar')));
+        } catch (_) {
+          messenger.showSnackBar(const SnackBar(
+              content: Text('Trabajo cancelado. Borra el evento en Calendar a mano.')));
+        }
+      } else {
+        messenger.showSnackBar(const SnackBar(content: Text('Trabajo cancelado')));
+      }
     }
   }
 
@@ -225,7 +268,7 @@ class DetalleTrabajo extends StatelessWidget {
                   ChoiceChip(
                     label: Text(x),
                     selected: tipo == x,
-                    selectedColor: Paleta.teal,
+                    selectedColor: Paleta.arena, // acento único (antes teal)
                     showCheckmark: false,
                     labelStyle: TextStyle(
                         fontWeight: FontWeight.w700,
@@ -253,7 +296,7 @@ class DetalleTrabajo extends StatelessWidget {
                   ChoiceChip(
                     label: Text(x),
                     selected: metodo == x,
-                    selectedColor: Paleta.teal,
+                    selectedColor: Paleta.arena,
                     showCheckmark: false,
                     labelStyle: TextStyle(
                         fontWeight: FontWeight.w700,

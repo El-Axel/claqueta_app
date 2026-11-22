@@ -28,7 +28,8 @@ class _PestanaClientesState extends State<PestanaClientes> {
             .toList();
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 112),
+          // Mismos márgenes y encabezado que el Home.
+          padding: const EdgeInsets.fromLTRB(22, 14, 22, 124),
           children: [
             Row(
               children: [
@@ -36,16 +37,17 @@ class _PestanaClientesState extends State<PestanaClientes> {
                   child: Encabezado('Clientes', subtitulo: '${tienda.clientes.length} clientes'),
                 ),
                 BotonCirculo(Icons.person_add_alt_1_outlined,
-                    () => ir(context, const FormularioCliente())),
+                    () => ir(context, const FormularioCliente()),
+                    tamano: 46),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
             TextField(
               onChanged: (v) => setState(() => busqueda = v),
               decoration: decoracionCampo('Buscar por nombre o empresa',
                   icono: const Icon(Icons.search, size: 20)),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 22),
             if (lista.isEmpty)
               const Vacio('Sin resultados', 'Ningún cliente coincide con la búsqueda.')
             else
