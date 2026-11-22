@@ -55,6 +55,41 @@ ThemeData crearTema() {
       backgroundColor: Paleta.tinta,
       contentTextStyle: TextStyle(color: Paleta.suelo, fontWeight: FontWeight.w700),
     ),
+    // ---- Estilo limpio por defecto (el del Home) ----
+    // Se define aquí una vez para que divisores, interruptores, chips y
+    // botones de texto de TODAS las pantallas usen el mismo acento arena.
+    dividerTheme: DividerThemeData(color: Colors.white.withAlpha(18), thickness: 1),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((s) =>
+          s.contains(WidgetState.selected) ? Paleta.suelo : Paleta.tinta.withAlpha(170)),
+      trackColor: WidgetStateProperty.resolveWith((s) =>
+          s.contains(WidgetState.selected) ? Paleta.arena : Colors.white.withAlpha(16)),
+      trackOutlineColor: WidgetStateProperty.resolveWith((s) =>
+          s.contains(WidgetState.selected) ? Colors.transparent : Colors.white.withAlpha(40)),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: Paleta.arena,
+        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: Colors.white.withAlpha(13),
+      selectedColor: Paleta.arena,
+      side: BorderSide(color: Colors.white.withAlpha(22)),
+      shape: const StadiumBorder(),
+      labelStyle: const TextStyle(fontWeight: FontWeight.w700, color: Paleta.tinta),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? Paleta.arena : Colors.white.withAlpha(13)),
+        foregroundColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? Paleta.suelo : Paleta.tinta.withAlpha(200)),
+        side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withAlpha(22))),
+        textStyle: const WidgetStatePropertyAll(TextStyle(fontWeight: FontWeight.w700)),
+      ),
+    ),
   );
   return base.copyWith(
     textTheme: GoogleFonts.figtreeTextTheme(base.textTheme)

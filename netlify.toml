@@ -1,0 +1,21 @@
+# Publicación de la versión web de Claqueta en Netlify.
+# Netlify instala Flutter, compila la web y publica build/web.
+# Las claves NO están en el repositorio: se configuran en Netlify →
+# Site configuration → Environment variables (ver docs/NETLIFY.md).
+
+[build]
+  command = "bash scripts/netlify_build.sh"
+  publish = "build/web"
+
+# La app es una sola página: cualquier ruta abre index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# El código compilado cambia de nombre en cada versión; index.html no se
+# guarda en caché para que siempre cargue la versión más reciente.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

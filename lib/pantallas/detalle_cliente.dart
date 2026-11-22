@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../compartir.dart';
 import '../modelos.dart';
 import '../tema.dart';
@@ -47,21 +48,26 @@ class DetalleCliente extends StatelessWidget {
             ),
           ]),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 40),
             children: [
-              Center(child: Ficha(inicialDe(c.nombre), tamano: 88)),
-              const SizedBox(height: 12),
-              Center(child: Text(c.nombre, style: estiloDisplay(tamano: 18), textAlign: TextAlign.center)),
-              const SizedBox(height: 16),
-              Panel(
-                relleno: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              Center(child: Ficha(inicialDe(c.nombre), tamano: 84, redonda: true)),
+              const SizedBox(height: 14),
+              // Nombre con el estilo del saludo del Home (Figtree en negrita).
+              Center(
+                  child: Text(c.nombre,
+                      style: estiloTituloPantalla(), textAlign: TextAlign.center)),
+              const SizedBox(height: 22),
+              // Cifras en tinta y solo lo cobrable (Aceptado) en arena:
+              // antes cada cifra tenía un color distinto.
+              TarjetaSuave(
+                relleno: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
                 child: Estadisticas(
                   [
                     ['${cots.length}', 'Cotizaciones'],
                     [pesosCortos(aceptado), 'Aceptado'],
                     ['${trabajos.length}', 'Trabajos'],
                   ],
-                  colores: const [Paleta.teal, Paleta.arena, Paleta.durazno],
+                  colores: const [Paleta.tinta, Paleta.arena, Paleta.tinta],
                 ),
               ),
               const SizedBox(height: 10),
@@ -97,6 +103,49 @@ class DetalleCliente extends StatelessWidget {
                   ),
                 ],
               ),
+              // Código para que el cliente entre a su espacio en la app.
+              if (c.codigo.isNotEmpty) ...[
+                const TituloSeccion('Acceso del cliente'),
+                TarjetaSuave(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(c.codigo,
+                          style: estiloDisplay(tamano: 22, color: Paleta.arena)),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Con este código ${c.nombre} entra a Claqueta como cliente: ve sus cotizaciones, '
+                        'responde, pide cotizaciones nuevas y recibe novedades.',
+                        style: estiloSuave(tamano: 13),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 4,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () async {
+                              await Clipboard.setData(ClipboardData(text: c.codigo));
+                              if (context.mounted) mostrarAviso(context, 'Código copiado');
+                            },
+                            icon: const Icon(Icons.copy, size: 18),
+                            label: const Text('Copiar'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () async {
+                              final ok = await abrirWhatsApp(c.telefono, mensajeInvitacion(c, tienda.config));
+                              if (!ok && context.mounted) {
+                                mostrarAviso(context, 'No se pudo abrir WhatsApp (revisa el teléfono)');
+                              }
+                            },
+                            icon: const Icon(Icons.chat_outlined, size: 18),
+                            label: const Text('Enviar por WhatsApp'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const TituloSeccion('Cotizaciones'),
               if (cots.isEmpty)
                 const Vacio('Sin cotizaciones', 'Crea la primera para este cliente.')

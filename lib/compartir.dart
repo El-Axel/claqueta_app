@@ -30,15 +30,30 @@ String mensajeCotizacion(Cotizacion c, Cliente cl, Config cfg) {
 
 String mensajeRecordatorio(Cotizacion c, Cliente cl, Config cfg) {
   final dias = c.enviada == null ? 0 : diasDesde(c.enviada!);
+  // "hoy", "ayer" o "hace N días" (nunca "hace 0 días").
+  final cuando = dias <= 0
+      ? 'hoy'
+      : dias == 1
+          ? 'ayer'
+          : 'hace $dias días';
   return 'Hola ${cl.nombre}, ¿cómo vas? Te escribo para saber si pudiste revisar la '
       'cotización ${folio(c.n)} de "${c.proyecto}" (${formatearPesos(c.total)}) que te envié '
-      'hace $dias días. Si quieres ajustamos alcance o fechas. ${cfg.negocio}';
+      '$cuando. Si quieres ajustamos alcance o fechas. ${cfg.negocio}';
 }
+
+/// Invitación al espacio del cliente, con su código.
+String mensajeInvitacion(Cliente cl, Config cfg) =>
+    'Hola ${cl.nombre}, te invito a seguir tus proyectos conmigo en Claqueta: '
+    'ahí ves tus cotizaciones, las respondes, me pides nuevas y recibes novedades de tus rodajes.\n\n'
+    '1. Abre la app Claqueta.\n'
+    '2. Toca "Soy cliente · tengo un código".\n'
+    '3. Escribe tu código: ${cl.codigo}\n\n'
+    '${cfg.negocio}';
 
 String asuntoCotizacion(Cotizacion c) => 'Cotización ${folio(c.n)} - ${c.proyecto}';
 
 String mensajeAgenda(Trabajo t, Cliente cl, Config cfg) {
-  final clima = climaDe(t.fecha);
+  final clima = climaTrabajo(t);
   return 'Hola ${cl.nombre}, te confirmo el rodaje "${t.titulo}":\n'
       '${fechaLarga(t.fecha)}, ${hora12(t.hora)}\n'
       'Lugar: ${t.lugar}${t.zona.isEmpty ? '' : ' (${t.zona})'}\n'

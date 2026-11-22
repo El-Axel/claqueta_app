@@ -41,7 +41,7 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
             ),
           ]),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+            padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
             children: [
               const Aviso(
                 'Los precios de ejemplo son un punto de partida: edítalos con tus tarifas reales.',
@@ -99,9 +99,13 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Nombre en Figtree negrita (como los títulos de tarjeta del
+                  // Home); el precio es la única cifra en acento.
                   Row(
                     children: [
-                      Expanded(child: Text(p.nombre, style: estiloDisplay(tamano: 15))),
+                      Expanded(
+                          child: Text(p.nombre,
+                              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
                       textoPesos(tienda.precioPaquete(p), tamano: 15),
                     ],
                   ),
@@ -109,7 +113,8 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
                     const SizedBox(height: 4),
                     Text(p.descripcion, style: estiloSuave(tamano: 13)),
                   ],
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
+                  // Servicios del paquete en píldoras neutras (antes teal).
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -117,8 +122,8 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
                       for (final e in p.items.entries)
                         if (tienda.servicio(e.key) != null)
                           Etiqueta('${tienda.servicio(e.key)!.nombre} x${e.value}',
-                              color: Paleta.teal),
-                      if (p.descuento > 0) Etiqueta('${p.descuento}% desc.', color: Paleta.durazno),
+                              color: Paleta.tinta.withAlpha(200)),
+                      if (p.descuento > 0) Etiqueta('${p.descuento}% desc.', color: Paleta.arena),
                     ],
                   ),
                 ],
@@ -155,7 +160,7 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
               decoration: decoracionCampo('Precio por unidad (COP)'),
             ),
             const SizedBox(height: 14),
-            Text('COBRAS POR', style: estiloSuave(tamano: 10)),
+            const EtiquetaSeccion('Cobras por'),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -164,7 +169,7 @@ class _PantallaCatalogoState extends State<PantallaCatalogo> {
                   ChoiceChip(
                     label: Text(u),
                     selected: unidad == u,
-                    selectedColor: Paleta.teal,
+                    selectedColor: Paleta.arena, // acento único (antes teal)
                     showCheckmark: false,
                     labelStyle: TextStyle(
                         fontWeight: FontWeight.w700,
@@ -288,7 +293,7 @@ class _FormularioPaqueteState extends State<FormularioPaquete> {
     return Lienzo(
       appBar: barra(widget.editar == null ? 'Nuevo paquete' : 'Editar paquete'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+        padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
         children: [
           TextField(
             controller: nombre,
@@ -317,8 +322,9 @@ class _FormularioPaqueteState extends State<FormularioPaquete> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(s.nombre, style: const TextStyle(fontWeight: FontWeight.w700)),
+                              // Precio tenue (el acento queda para el total).
                               Text('${formatearPesos(s.precio)} por ${s.unidad}',
-                                  style: const TextStyle(color: Paleta.arena, fontSize: 12)),
+                                  style: estiloSuave(tamano: 13)),
                             ],
                           ),
                         ),
@@ -354,12 +360,11 @@ class _FormularioPaqueteState extends State<FormularioPaquete> {
                 FilaDato('Suma de servicios', formatearPesos(base)),
                 if (descuento > 0)
                   FilaDato('Descuento $descuento%', '-${formatearPesos(base - tienda.precioPaquete(p))}',
-                      colorValor: Paleta.durazno),
-                const Divider(color: Colors.white24, height: 22),
+                      colorValor: Paleta.tinta.withAlpha(170)),
+                const Divider(height: 22),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Precio del paquete', style: TextStyle(fontWeight: FontWeight.w700)),
+                    const Expanded(child: EtiquetaSeccion('Precio del paquete')),
                     textoPesos(tienda.precioPaquete(p)),
                   ],
                 ),

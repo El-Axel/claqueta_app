@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><radialGradient id="b" cx="25%" cy="15%" r="95%"><stop offset="0" stop-color="#3FC2AA"/><stop offset=".5" stop-color="#1E6B6B"/><stop offset="1" stop-color="#0B2A2E"/></radialGradient>
+<linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE3A8"/><stop offset="1" stop-color="#EDB55A"/></linearGradient>
+<filter id="s" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#04181B" flood-opacity=".5"/></filter></defs>
+<g filter="url(#s)">
+<g transform="rotate(-12 110 220)"><rect x="110" y="120" width="300" height="86" rx="26" fill="url(#a)"/>
+<polygon points="190,206 228,120 262,120 224,206" fill="#0B2A2E"/><polygon points="274,206 312,120 346,120 308,206" fill="#0B2A2E"/></g>
+<path d="M110 236 H410 V372 a44 44 0 0 1 -44 44 H154 a44 44 0 0 1 -44 -44 Z" fill="url(#a)"/></g>
+<circle cx="190" cy="326" r="30" fill="#0B2A2E"/></svg>

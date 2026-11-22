@@ -185,7 +185,7 @@ class _NuevaCotizacionState extends State<NuevaCotizacion> {
           ? 'Nueva cotización'
           : 'Editar ${folio(widget.editar!.n)}'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+        padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
         children: [
           CampoSelector(
             etiqueta: 'Cliente',
@@ -216,10 +216,15 @@ class _NuevaCotizacionState extends State<NuevaCotizacion> {
                       padding: const EdgeInsets.only(right: 8),
                       child: ActionChip(
                         label: Text('${p.nombre} · ${formatearPesos(tienda.precioPaquete(p))}'),
+                        // Paquete aplicado: velo arena (antes teal); los demás,
+                        // el vidrio suave de las tarjetas.
                         backgroundColor: paqueteAplicado == p.nombre
-                            ? Paleta.teal.withAlpha(60)
-                            : Colors.white.withAlpha(18),
-                        side: BorderSide(color: Colors.white.withAlpha(50)),
+                            ? Paleta.arena.withAlpha(45)
+                            : Colors.white.withAlpha(13),
+                        side: BorderSide(
+                            color: paqueteAplicado == p.nombre
+                                ? Paleta.arena.withAlpha(120)
+                                : Colors.white.withAlpha(22)),
                         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
                         onPressed: () => aplicarPaquete(p),
                       ),
@@ -255,8 +260,10 @@ class _NuevaCotizacionState extends State<NuevaCotizacion> {
                               children: [
                                 Text(s.nombre,
                                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                                // Precio tenue: con muchos servicios, el arena en
+                                // cada renglón llenaba la tarjeta de acento.
                                 Text('${formatearPesos(s.precio)} por ${s.unidad}',
-                                    style: const TextStyle(color: Paleta.arena, fontSize: 12)),
+                                    style: estiloSuave(tamano: 13)),
                               ],
                             ),
                           ),
@@ -287,7 +294,7 @@ class _NuevaCotizacionState extends State<NuevaCotizacion> {
                           Text(personalizados[i].descripcion,
                               style: const TextStyle(fontWeight: FontWeight.w700)),
                           Text('${formatearPesos(personalizados[i].precio)} · personalizado',
-                              style: const TextStyle(color: Paleta.arena, fontSize: 12)),
+                              style: estiloSuave(tamano: 13)),
                         ],
                       ),
                     ),
@@ -325,15 +332,15 @@ class _NuevaCotizacionState extends State<NuevaCotizacion> {
                     ),
                   ],
                 ),
-                const Divider(color: Colors.white24, height: 24),
+                const Divider(height: 24),
                 Row(
                   children: [
                     const Expanded(
                       child: Text('Incluir IVA 19%', style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
+                    // El color del interruptor lo pone el tema (arena).
                     Switch(
                       value: iva,
-                      activeColor: Paleta.teal,
                       onChanged: (v) => setState(() => iva = v),
                     ),
                   ],
@@ -356,13 +363,13 @@ class _NuevaCotizacionState extends State<NuevaCotizacion> {
                 FilaDato('Subtotal', formatearPesos(previa.subtotal)),
                 if (descuento > 0)
                   FilaDato('Descuento $descuento%', '-${formatearPesos(previa.valorDescuento)}',
-                      colorValor: Paleta.durazno),
+                      colorValor: Paleta.tinta.withAlpha(170)),
                 if (iva) FilaDato('IVA 19%', formatearPesos(previa.valorIva)),
-                const Divider(color: Colors.white24, height: 22),
+                const Divider(height: 22),
+                // Total con la etiqueta de sección del Home; la cifra es el acento.
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total (COP)', style: TextStyle(fontWeight: FontWeight.w700)),
+                    const Expanded(child: EtiquetaSeccion('Total (COP)')),
                     textoPesos(previa.total),
                   ],
                 ),

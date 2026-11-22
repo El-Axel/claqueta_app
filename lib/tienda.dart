@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'modelos.dart';
+import 'servicios/clima_api.dart';
 import 'util.dart';
 
 // ---------------------------------------------------------------
@@ -17,6 +19,12 @@ final Tienda tienda = Tienda();
 
 class Tienda extends ChangeNotifier {
   static const String _clave = 'claqueta-v2';
+
+  // Cuando llega el pronóstico real de Open-Meteo, las pantallas que
+  // escuchan la tienda se redibujan solas (sin guardar nada).
+  Tienda() {
+    servicioClima.addListener(notifyListeners);
+  }
 
   List<Cliente> clientes = [];
   List<Servicio> servicios = [];
@@ -35,17 +43,65 @@ class Tienda extends ChangeNotifier {
     if (guardado != null) {
       try {
         _desdeJson(jsonDecode(guardado) as Map<String, dynamic>);
+        if (_asegurarCodigos()) _prefs!.setString(_clave, jsonEncode(_aJson()));
         return;
       } catch (_) {
         // Si los datos guardados están dañados, se empieza con datos de ejemplo.
       }
     }
     _sembrar();
+    _asegurarCodigos();
+  }
+
+  /// Se llama después de cada cambio guardado. La usa la nube (Supabase)
+  /// para subir los datos. Es una "función gancho": la tienda no sabe
+  /// nada de Supabase, solo avisa.
+  void Function()? alGuardar;
+
+  /// Otro gancho: avisa una "novedad" para el cliente (cotización
+  /// enviada, rodaje agendado, pago recibido...). La nube la publica en
+  /// el espacio del cliente.
+  void Function(int clienteId, String tipo, String texto)? alNovedad;
+
+  void avisar(int clienteId, String tipo, String texto) =>
+      alNovedad?.call(clienteId, tipo, texto);
+
+  /// Genera el código de invitación de cada cliente que aún no lo tenga.
+  /// Formato CLQ-XXXXXX sin letras que se confunden (0/O, 1/I/L).
+  bool _asegurarCodigos() {
+    const letras = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    final azar = Random.secure();
+    var cambio = false;
+    final usados = clientes.map((c) => c.codigo).toSet();
+    for (final c in clientes) {
+      if (c.codigo.isNotEmpty) continue;
+      String nuevo;
+      do {
+        nuevo = 'CLQ-${List.generate(6, (_) => letras[azar.nextInt(letras.length)]).join()}';
+      } while (usados.contains(nuevo));
+      usados.add(nuevo);
+      c.codigo = nuevo;
+      cambio = true;
+    }
+    return cambio;
   }
 
   void _cambio() {
     _prefs?.setString(_clave, jsonEncode(_aJson()));
     notifyListeners();
+    alGuardar?.call();
+  }
+
+  /// Copia completa de los datos (lo que se sube a la nube).
+  Map<String, dynamic> instantanea() => _aJson();
+
+  /// Reemplaza todos los datos por los que vienen de la nube.
+  /// Conserva la sesión abierta en este teléfono.
+  void reemplazarDesde(Map<String, dynamic> j) {
+    final conSesion = sesion;
+    _desdeJson(j);
+    sesion = conSesion;
+    _cambio();
   }
 
   Map<String, dynamic> _aJson() => {
@@ -125,6 +181,15 @@ class Tienda extends ChangeNotifier {
 
   void guardarConfig() => _cambio();
 
+  /// Cambia la zona base (ciudad) usada para buscar lugares y el clima.
+  void cambiarZona(String ciudad, double lat, double lon) {
+    config
+      ..ciudad = ciudad
+      ..lat = lat
+      ..lon = lon;
+    _cambio();
+  }
+
   // ---------- Búsquedas ----------
   Cliente cliente(int id) => clientes.firstWhere(
         (c) => c.id == id,
@@ -168,6 +233,7 @@ class Tienda extends ChangeNotifier {
       c.id = _siguiente(clientes.map((x) => x.id));
       clientes.add(c);
     }
+    _asegurarCodigos();
     _cambio();
     return c.id;
   }
@@ -250,10 +316,19 @@ class Tienda extends ChangeNotifier {
   void cambiarEstado(int n, String estado) {
     final c = cotizacion(n);
     if (c == null) return;
+    final antes = c.estado;
     c.estado = estado;
     if (estado == estEnviada) c.enviada = DateTime.now();
     if (estado == estBorrador) c.enviada = null;
     _cambio();
+    if (antes == estado) return;
+    if (estado == estEnviada) {
+      avisar(c.clienteId, 'cotizacion',
+          'Te envié la cotización ${folio(c.n)} para "${c.proyecto}" por ${formatearPesos(c.total)}.');
+    } else if (estado == estAceptada) {
+      avisar(c.clienteId, 'cotizacion',
+          'La cotización ${folio(c.n)} quedó aceptada. ¡Preparemos el rodaje!');
+    }
   }
 
   int duplicarCotizacion(int n) {
@@ -293,17 +368,24 @@ class Tienda extends ChangeNotifier {
 
   // ---------- Trabajos y agenda ----------
   int guardarTrabajo(Trabajo t) {
-    if (t.id == 0) {
+    final nuevo = t.id == 0;
+    if (nuevo) {
       t.id = _siguiente(trabajos.map((x) => x.id));
       trabajos.add(t);
     }
     _cambio();
+    if (nuevo) {
+      avisar(t.clienteId, 'rodaje',
+          'Agendé el rodaje "${t.titulo}" para el ${fechaLarga(t.fecha)} a las ${hora12(t.hora)} en ${t.lugar}.');
+    }
     return t.id;
   }
 
   void eliminarTrabajo(int id) {
+    final t = trabajo(id);
     trabajos.removeWhere((t) => t.id == id);
     _cambio();
+    if (t != null) avisar(t.clienteId, 'rodaje', 'Se canceló el rodaje "${t.titulo}".');
   }
 
   void registrarPago(int idTrabajo, Pago p) {
@@ -311,6 +393,9 @@ class Tienda extends ChangeNotifier {
     if (t == null) return;
     t.pagos.add(p);
     _cambio();
+    avisar(t.clienteId, 'pago',
+        'Recibí tu pago de ${formatearPesos(p.monto)} para "${t.titulo}". '
+        '${t.pendiente > 0 ? 'Pendiente: ${formatearPesos(t.pendiente)}.' : '¡Quedó pagado completo!'}');
   }
 
   List<Trabajo> trabajosDelDia(DateTime dia) {

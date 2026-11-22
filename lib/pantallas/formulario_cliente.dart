@@ -62,7 +62,8 @@ class _FormularioClienteState extends State<FormularioCliente> {
     return Lienzo(
       appBar: barra(widget.editar == null ? 'Nuevo cliente' : 'Editar cliente'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+        // Márgenes del Home (22) y espacio generoso entre campos.
+        padding: const EdgeInsets.fromLTRB(22, 12, 22, 40),
         children: [
           TextField(
             controller: nombre,

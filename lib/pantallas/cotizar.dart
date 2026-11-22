@@ -39,10 +39,11 @@ class _PestanaCotizarState extends State<PestanaCotizar> {
         final filtros = ['Todas', ...estados];
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 112),
+          // Mismos márgenes que el Home (22 a los lados, 14 arriba).
+          padding: const EdgeInsets.fromLTRB(22, 14, 22, 124),
           children: [
             const Encabezado('Cotizaciones', subtitulo: 'Crea, envía y da seguimiento'),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
             Row(
               children: [
                 Expanded(
@@ -76,20 +77,19 @@ class _PestanaCotizarState extends State<PestanaCotizar> {
                           duration: const Duration(milliseconds: 200),
                           alignment: Alignment.center,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
+                          // Chip limpio: arena si está elegido, vidrio suave si no.
+                          // Sin sombra teal (el estilo limpio usa un solo acento).
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
-                            color: filtro == f ? Paleta.arena : Colors.white.withAlpha(10),
+                            color: filtro == f ? Paleta.arena : Colors.white.withAlpha(13),
                             border: Border.all(
-                              color: filtro == f ? Colors.transparent : Colors.white.withAlpha(34),
+                              color: filtro == f ? Colors.transparent : Colors.white.withAlpha(22),
                             ),
-                            boxShadow: filtro == f
-                                ? [BoxShadow(color: Paleta.teal.withAlpha(60), blurRadius: 12)]
-                                : null,
                           ),
                           child: Text(
                             f == 'Todas' ? f : '$f ${tienda.contarEstado(f)}',
                             style: TextStyle(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               fontSize: 13,
                               color: filtro == f ? Paleta.suelo : Paleta.tinta.withAlpha(180),
                             ),
@@ -100,7 +100,7 @@ class _PestanaCotizarState extends State<PestanaCotizar> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 22),
             if (lista.isEmpty)
               const Vacio('Sin resultados', 'Prueba otro filtro o crea una cotización nueva.')
             else
