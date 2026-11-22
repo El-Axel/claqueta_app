@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'tema.dart';
 import 'tienda.dart';
 import 'servicios/google_api.dart';
+import 'servicios/nube.dart';
 import 'pantallas/entrada.dart';
 import 'pantallas/principal.dart';
 
@@ -11,6 +12,10 @@ Future<void> main() async {
   await tienda.cargar();
   // Google (si está configurado): recupera la sesión en segundo plano.
   servicioGoogle.iniciar().catchError((_) {});
+  // Nube (Supabase), si está configurada. Si falla, la app sigue local.
+  try {
+    await servicioNube.iniciar();
+  } catch (_) {}
   runApp(const ClaquetaApp());
 }
 

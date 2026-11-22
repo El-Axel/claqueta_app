@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../servicios/google_api.dart';
+import '../servicios/nube.dart';
 import '../selectores.dart';
 import '../servicios/ubicacion.dart';
 import '../tema.dart';
@@ -32,7 +33,7 @@ class PantallaAjustes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([tienda, servicioGoogle]),
+      listenable: Listenable.merge([tienda, servicioGoogle, servicioNube]),
       builder: (context, _) {
         final cfg = tienda.config;
         final g = servicioGoogle;
@@ -115,6 +116,72 @@ class PantallaAjustes extends StatelessWidget {
                     ? 'Mapa y clima son gratuitos y no piden cuenta. Gmail y Calendar usan tu cuenta de Google con permisos mínimos.'
                     : 'Mapa y clima son reales. Gmail y Calendar están en modo demostración hasta configurar Google.',
                 style: estiloSuave(tamano: 12),
+              ),
+              // ---------- Nube (Supabase) ----------
+              const TituloSeccion('Nube'),
+              Panel(
+                relleno: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          servicioNube.estado == EstadoNube.alDia
+                              ? Icons.cloud_done_outlined
+                              : servicioNube.estado == EstadoNube.error
+                                  ? Icons.cloud_off_outlined
+                                  : Icons.cloud_outlined,
+                          size: 20,
+                          color: servicioNube.estado == EstadoNube.alDia
+                              ? Paleta.arena
+                              : Paleta.tinta.withAlpha(150),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(_textoNube(), style: const TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      servicioNube.configurada
+                          ? 'Tus datos se guardan en el teléfono y una copia en Supabase. Si reinstalas la app, los recuperas al iniciar sesión.'
+                          : 'Esta versión no tiene Supabase configurado: los datos solo están en el teléfono.',
+                      style: estiloSuave(tamano: 12),
+                    ),
+                    if (servicioNube.configurada) ...[
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 4,
+                        children: [
+                          if (!servicioNube.conectada)
+                            TextButton.icon(
+                              onPressed: () => conectarNube(context),
+                              icon: const Icon(Icons.cloud_sync_outlined, size: 18),
+                              label: const Text('Conectar'),
+                            )
+                          else ...[
+                            TextButton.icon(
+                              onPressed: servicioNube.estado == EstadoNube.sincronizando
+                                  ? null
+                                  : () => _accionNube(context, servicioNube.subir, 'Copia actualizada en la nube'),
+                              icon: const Icon(Icons.cloud_upload_outlined, size: 18),
+                              label: const Text('Guardar ahora'),
+                            ),
+                            TextButton.icon(
+                              onPressed: servicioNube.estado == EstadoNube.sincronizando
+                                  ? null
+                                  : () => _traerDeNube(context),
+                              icon: const Icon(Icons.cloud_download_outlined, size: 18),
+                              label: const Text('Traer de la nube'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
               const TituloSeccion('Zona de búsqueda'),
               Panel(
@@ -313,6 +380,7 @@ class PantallaAjustes extends StatelessWidget {
                 );
                 if (ok && context.mounted) {
                   tienda.cerrarSesion();
+                  servicioNube.desconectar().catchError((_) {});
                   servicioGoogle.salir().catchError((_) {});
                   Navigator.pushAndRemoveUntil(
                     context,
@@ -328,6 +396,46 @@ class PantallaAjustes extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _textoNube() {
+    final n = servicioNube;
+    switch (n.estado) {
+      case EstadoNube.sinConfigurar:
+        return 'Solo en este teléfono';
+      case EstadoNube.desconectado:
+        return 'Nube sin conectar';
+      case EstadoNube.sincronizando:
+        return 'Guardando en la nube…';
+      case EstadoNube.error:
+        return 'No se pudo sincronizar';
+      case EstadoNube.alDia:
+        final h = n.ultimaSubida;
+        return h == null
+            ? 'Conectada${n.correo.isEmpty ? '' : ' · ${n.correo}'}'
+            : 'Al día · ${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}';
+    }
+  }
+
+  Future<void> _accionNube(BuildContext context, Future<void> Function() accion, String ok) async {
+    try {
+      await accion();
+      if (context.mounted) mostrarAviso(context, ok);
+    } catch (e) {
+      if (context.mounted) mostrarAviso(context, 'Nube: ${e.toString().replaceFirst('Exception: ', '')}');
+    }
+  }
+
+  Future<void> _traerDeNube(BuildContext context) async {
+    final ok = await confirmar(
+      context,
+      titulo: 'Traer datos de la nube',
+      mensaje: 'Los datos de este teléfono se reemplazan por la copia guardada en Supabase.',
+      boton: 'Traer',
+    );
+    if (ok && context.mounted) {
+      await _accionNube(context, servicioNube.bajar, 'Datos recuperados de la nube');
+    }
   }
 
   /// Escribir la ciudad a mano (si no quieres dar permiso de ubicación).

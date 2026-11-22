@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../tema.dart';
+import '../selectores.dart';
 import '../servicios/google_api.dart';
+import '../servicios/nube.dart';
 import '../tienda.dart';
 import '../widgets.dart';
 import 'principal.dart';
@@ -28,6 +30,9 @@ class _PantallaEntradaState extends State<PantallaEntrada> {
     setState(() => cargando = true);
     try {
       await servicioGoogle.entrar();
+      if (!mounted) return;
+      // Nube: recupera los datos si ya existían (p. ej. tras reinstalar).
+      await conectarNube(context);
       if (!mounted) return;
       tienda.iniciarSesion();
       Navigator.pushAndRemoveUntil(context,
@@ -95,9 +100,11 @@ class _PantallaEntradaState extends State<PantallaEntrada> {
               const SizedBox(height: 12),
               Center(
                 child: Text(
-                    servicioGoogle.real
-                        ? 'Tus datos se guardan en este dispositivo'
-                        : 'Modo demostración: Google no está configurado en esta versión',
+                    !servicioGoogle.real
+                        ? 'Modo demostración: Google no está configurado en esta versión'
+                        : servicioNube.configurada
+                            ? 'Tus datos se guardan en el teléfono y en la nube'
+                            : 'Tus datos se guardan en este dispositivo',
                     textAlign: TextAlign.center,
                     style: estiloSuave()),
               ),

@@ -50,9 +50,27 @@ class Tienda extends ChangeNotifier {
     _sembrar();
   }
 
+  /// Se llama después de cada cambio guardado. La usa la nube (Supabase)
+  /// para subir los datos. Es una "función gancho": la tienda no sabe
+  /// nada de Supabase, solo avisa.
+  void Function()? alGuardar;
+
   void _cambio() {
     _prefs?.setString(_clave, jsonEncode(_aJson()));
     notifyListeners();
+    alGuardar?.call();
+  }
+
+  /// Copia completa de los datos (lo que se sube a la nube).
+  Map<String, dynamic> instantanea() => _aJson();
+
+  /// Reemplaza todos los datos por los que vienen de la nube.
+  /// Conserva la sesión abierta en este teléfono.
+  void reemplazarDesde(Map<String, dynamic> j) {
+    final conSesion = sesion;
+    _desdeJson(j);
+    sesion = conSesion;
+    _cambio();
   }
 
   Map<String, dynamic> _aJson() => {

@@ -6,6 +6,7 @@ import 'package:claqueta/modelos.dart';
 import 'package:claqueta/servicios/correo_html.dart';
 import 'package:claqueta/servicios/google_api.dart';
 import 'package:claqueta/servicios/lugares_api.dart';
+import 'package:claqueta/servicios/nube.dart';
 import 'package:claqueta/util.dart';
 
 // Pruebas de las integraciones que no necesitan internet.
@@ -45,6 +46,31 @@ void main() {
     expect(mime, contains('multipart/alternative'));
     expect(mime, contains('text/html'));
     expect(mime, contains('application/pdf'));
+  });
+
+  test('Las filas para Supabase llevan dueño, relaciones y el objeto completo', () {
+    final j = {
+      'config': Config().toJson(),
+      'clientes': [Cliente(id: 1, nombre: 'Ana', correo: 'a@x.co', telefono: '').toJson()],
+      'servicios': <Map<String, dynamic>>[],
+      'paquetes': <Map<String, dynamic>>[],
+      'cotizaciones': [
+        Cotizacion(
+          n: 7, clienteId: 1, proyecto: 'Video', creada: DateTime(2026, 11, 22), descuento: 10, iva: true,
+          items: [ItemCot(descripcion: 'Cámara', precio: 100000, cantidad: 2)],
+        ).toJson()
+      ],
+      'trabajos': <Map<String, dynamic>>[],
+    };
+    final f = filasParaSubir(j, 'uid-123');
+    final cot = f['cotizaciones']!.single;
+    expect(cot['user_id'], 'uid-123');
+    expect(cot['cliente_id'], 1);
+    // 200.000 - 10 % = 180.000; + IVA 19 % = 214.200
+    expect(cot['total'], 214200);
+    expect((cot['datos'] as Map)['proyecto'], 'Video');
+    expect(f['clientes']!.single['nombre'], 'Ana');
+    expect(f['config']!.single['user_id'], 'uid-123');
   });
 
   test('Solo se piden los permisos mínimos de Google', () {
