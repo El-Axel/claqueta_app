@@ -52,19 +52,26 @@ paquete y la firma.
 
 ## 4. Ejecutar la app con Google
 
-En la carpeta del proyecto (cambia el valor por tu ID de cliente web):
+El ID de cliente web va en `dart_defines.json` (carpeta del proyecto, ignorado por Git),
+junto con las claves de Supabase (ver el README):
+
+```json
+{ "GOOGLE_WEB_CLIENT_ID": "TU_ID.apps.googleusercontent.com", "SUPABASE_URL": "…", "SUPABASE_ANON_KEY": "…" }
+```
+
+Ejecutar:
 
 ```powershell
-flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=TU_ID.apps.googleusercontent.com
+flutter run --dart-define-from-file=dart_defines.json
 ```
 
 Para el APK de la entrega:
 
 ```powershell
-flutter build apk --dart-define=GOOGLE_WEB_CLIENT_ID=TU_ID.apps.googleusercontent.com
+flutter build apk --dart-define-from-file=dart_defines.json
 ```
 
-Sin `--dart-define` (o en la versión web) la app entra en **modo demostración**: se ven
+Sin ese archivo (o en la versión web) la app entra en **modo demostración**: se ven
 los mismos pasos pero no se envía nada; las pantallas lo dicen.
 
 ## Qué hace cada permiso en la app

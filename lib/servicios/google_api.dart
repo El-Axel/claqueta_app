@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../modelos.dart';
 
@@ -31,31 +32,55 @@ const List<String> scopesGoogle = [
 
 final ServicioGoogle servicioGoogle = ServicioGoogle();
 
+// Cuenta recordada en el teléfono: la sesión queda iniciada aunque se
+// cierre y abra la app, hasta que el usuario toque "Cerrar sesión".
+const String _claveCorreo = 'claqueta-google-correo';
+const String _claveNombre = 'claqueta-google-nombre';
+
 class ServicioGoogle extends ChangeNotifier {
   GoogleSignInAccount? cuenta;
   bool _iniciado = false;
+  String _correoGuardado = '';
+  String _nombreGuardado = '';
 
   /// true = conexión real con Google; false = modo demostración.
   bool get real => _webClientId.isNotEmpty && !kIsWeb;
 
-  bool get conectado => cuenta != null;
-  String get correo => cuenta?.email ?? '';
-  String get nombre => cuenta?.displayName ?? '';
+  /// Conectado si Google entregó la cuenta en esta sesión O si quedó
+  /// recordada de antes (Android a veces no la devuelve en silencio al
+  /// abrir; los permisos de Gmail/Calendar se piden igual sin selector).
+  bool get conectado => cuenta != null || _correoGuardado.isNotEmpty;
+  String get correo => cuenta?.email ?? _correoGuardado;
+  String get nombre => cuenta?.displayName ?? _nombreGuardado;
 
   Future<void> iniciar() async {
     if (!real || _iniciado) return;
     _iniciado = true;
+    final p = await SharedPreferences.getInstance();
+    _correoGuardado = p.getString(_claveCorreo) ?? '';
+    _nombreGuardado = p.getString(_claveNombre) ?? '';
+    notifyListeners();
     final g = GoogleSignIn.instance;
     await g.initialize(serverClientId: _webClientId);
     g.authenticationEvents.listen((e) {
-      cuenta = switch (e) {
-        GoogleSignInAuthenticationEventSignIn() => e.user,
-        GoogleSignInAuthenticationEventSignOut() => null,
-      };
-      notifyListeners();
+      // Solo se actualiza con un inicio de sesión: si Android no entrega la
+      // cuenta en silencio, la sesión recordada se mantiene.
+      if (e is GoogleSignInAuthenticationEventSignIn) {
+        cuenta = e.user;
+        _recordar(e.user);
+        notifyListeners();
+      }
     }, onError: (_) {});
-    // Recupera la sesión anterior sin mostrar nada (si la hubo).
-    unawaited(g.attemptLightweightAuthentication());
+    // Recupera la sesión anterior sin mostrar nada (si Android la da).
+    unawaited(g.attemptLightweightAuthentication()?.catchError((_) => null));
+  }
+
+  Future<void> _recordar(GoogleSignInAccount u) async {
+    _correoGuardado = u.email;
+    _nombreGuardado = u.displayName ?? '';
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_claveCorreo, _correoGuardado);
+    await p.setString(_claveNombre, _nombreGuardado);
   }
 
   /// Abre el selector de cuentas de Google y pide los dos permisos.
@@ -66,6 +91,7 @@ class ServicioGoogle extends ChangeNotifier {
       final u = await GoogleSignIn.instance.authenticate(scopeHint: scopesGoogle);
       await u.authorizationClient.authorizeScopes(scopesGoogle);
       cuenta = u;
+      await _recordar(u);
       notifyListeners();
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) {
@@ -75,17 +101,36 @@ class ServicioGoogle extends ChangeNotifier {
     }
   }
 
+  /// Cerrar sesión: lo único que borra la cuenta recordada.
   Future<void> salir() async {
     if (real) await GoogleSignIn.instance.signOut();
     cuenta = null;
+    _correoGuardado = '';
+    _nombreGuardado = '';
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_claveCorreo);
+    await p.remove(_claveNombre);
     notifyListeners();
   }
 
+  /// Token para Gmail/Calendar. Primero en silencio (permisos ya
+  /// aceptados antes); si Google exige confirmar, muestra su ventana.
   Future<Map<String, String>> _cabeceras() async {
-    final u = cuenta;
-    if (u == null) throw Exception('Primero inicia sesión con Google');
-    var auth = await u.authorizationClient.authorizationForScopes(scopesGoogle);
-    auth ??= await u.authorizationClient.authorizeScopes(scopesGoogle);
+    if (!conectado) throw Exception('Primero inicia sesión con Google');
+    final cliente = cuenta?.authorizationClient ?? GoogleSignIn.instance.authorizationClient;
+    GoogleSignInClientAuthorization? auth;
+    try {
+      auth = await cliente.authorizationForScopes(scopesGoogle);
+    } catch (_) {}
+    if (auth == null) {
+      try {
+        auth = await cliente.authorizeScopes(scopesGoogle);
+      } on GoogleSignInException catch (e) {
+        throw Exception(e.code == GoogleSignInExceptionCode.canceled
+            ? 'Se canceló el permiso de Google'
+            : 'Google pidió volver a iniciar sesión (Ajustes → Conectar)');
+      }
+    }
     return {
       'Authorization': 'Bearer ${auth.accessToken}',
       'Content-Type': 'application/json; charset=utf-8',

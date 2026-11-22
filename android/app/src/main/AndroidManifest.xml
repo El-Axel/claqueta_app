@@ -3,7 +3,7 @@
     <!-- Ubicación aproximada (ciudad) para priorizar lugares cercanos al buscar direcciones -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
-        android:label="claqueta"
+        android:label="Claqueta"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

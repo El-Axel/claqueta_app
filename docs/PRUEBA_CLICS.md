@@ -1,6 +1,6 @@
 # Prueba clic por clic — Claqueta
 
-Generado por `test/recorrido_clics_test.dart` el 2026-11-21 23:35.
+Generado por `test/recorrido_clics_test.dart` el 2026-11-22 00:25.
 
 Cada fila es un toque hecho por la prueba automática, empezando siempre desde los datos de ejemplo. «⚠ sin cambio visible» significa que el toque no cambió de pantalla ni de contenido: hay que revisarlo a mano (puede ser un campo de texto o un botón que no hace nada).
 
@@ -10,7 +10,7 @@ Cada fila es un toque hecho por la prueba automática, empezando siempre desde l
 |---|---|---|---|
 | Entrada | 1 | 0 | 0 |
 | Conectar con Google | 2 | 0 | 0 |
-| Inicio | 24 | 0 | 1 |
+| Inicio | 23 | 0 | 1 |
 | Cotizar | 16 | 0 | 2 |
 | Agenda | 17 | 0 | 2 |
 | Finanzas | 10 | 0 | 1 |
@@ -20,12 +20,12 @@ Cada fila es un toque hecho por la prueba automática, empezando siempre desde l
 | Envío | 7 | 0 | 5 |
 | Catálogo y paquetes | 12 | 0 | 1 |
 | Formulario de paquete | 12 | 0 | 0 |
-| Agendar trabajo | 9 | 0 | 0 |
+| Agendar trabajo | 12 | 0 | 0 |
 | Detalle de trabajo | 5 | 0 | 3 |
 | Detalle de cliente | 8 | 0 | 2 |
 | Formulario de cliente | 6 | 0 | 0 |
 | Ajustes | 19 | 0 | 2 |
-| **Total** | **180** | **0** | **20** |
+| **Total** | **182** | **0** | **20** |
 
 ## Desbordes a 390 × 844 (fuente de prueba: confirmar en emulador)
 
@@ -46,7 +46,7 @@ Ninguno.
 | 1 | A · Alexander Pino Caro · alexpinocaro@gmail.com | cambia en la misma pantalla |
 | 2 | U · Usar otra cuenta · Disponible con Google configurado | → Conectar con Google + aviso (snackbar) |
 
-### Inicio (24 elementos tocables)
+### Inicio (23 elementos tocables)
 
 | # | Elemento | Resultado |
 |---|---|---|
@@ -65,15 +65,14 @@ Ninguno.
 | 13 | Clientes | → Pestaña Clientes |
 | 14 | PROGRESO DE COBRO · nov 2026 · $2.1M | → Pestaña Finanzas |
 | 15 | COT-0038 (Lumen Films) lleva 6 días sin respuesta. Toca para enviar... | → Detalle de cotización |
-| 16 | Lluvia 70% el Lun 23 nov para "Entrevista corporativa". Mira el pla... | → Detalle de trabajo |
-| 17 | Ver todo | → Pestaña Cotizar |
-| 18 | C · COT-0042 · Café Origen S.A.S. · Comercial 30" | → Detalle de cotización |
-| 19 | C · COT-0038 · Lumen Films · Reel para redes | → Detalle de cotización |
-| 20 | Inicio | ⚠ sin cambio visible |
-| 21 | icono 0xefae | → Pestaña Cotizar |
-| 22 | icono 0xf051f | → Pestaña Agenda |
-| 23 | icono 0xeebc | → Pestaña Finanzas |
-| 24 | icono 0xe488 | → Pestaña Clientes |
+| 16 | Ver todo | → Pestaña Cotizar |
+| 17 | C · COT-0042 · Café Origen S.A.S. · Comercial 30" | → Detalle de cotización |
+| 18 | C · COT-0038 · Lumen Films · Reel para redes | → Detalle de cotización |
+| 19 | Inicio | ⚠ sin cambio visible |
+| 20 | icono 0xefae | → Pestaña Cotizar |
+| 21 | icono 0xf051f | → Pestaña Agenda |
+| 22 | icono 0xeebc | → Pestaña Finanzas |
+| 23 | icono 0xe488 | → Pestaña Clientes |
 
 ### Cotizar (16 elementos tocables)
 
@@ -107,10 +106,10 @@ Ninguno.
 | 5 | M · 18 | cambia en la misma pantalla |
 | 6 | J · 19 | cambia en la misma pantalla |
 | 7 | V · 20 | cambia en la misma pantalla |
-| 8 | S · 21 | ⚠ sin cambio visible |
-| 9 | D · 22 | cambia en la misma pantalla |
-| 10 | E · Entrevista corporativa · Lun 23 nov · 2:00 pm · Parque Lleras | → Detalle de trabajo |
-| 11 | V · Videoclip · Jue 26 nov · 9:00 am · Parque de Envigado | → Detalle de trabajo |
+| 8 | S · 21 | cambia en la misma pantalla |
+| 9 | D · 22 | ⚠ sin cambio visible |
+| 10 | E · Entrevista corporativa · Mar 24 nov · 2:00 pm · Parque Lleras | → Detalle de trabajo |
+| 11 | V · Videoclip · Vie 27 nov · 9:00 am · Parque de Envigado | → Detalle de trabajo |
 | 12 | Agendar trabajo | → Agendar trabajo |
 | 13 | icono 0xf107 | → Pestaña Inicio |
 | 14 | icono 0xefae | → Pestaña Cotizar |
@@ -122,8 +121,8 @@ Ninguno.
 
 | # | Elemento | Resultado |
 |---|---|---|
-| 1 | E · Entrevista corporativa · Estudio Marea · Lun 23 nov | → Detalle de trabajo |
-| 2 | V · Videoclip · Lumen Films · Jue 26 nov | → Detalle de trabajo |
+| 1 | E · Entrevista corporativa · Estudio Marea · Mar 24 nov | → Detalle de trabajo |
+| 2 | V · Videoclip · Lumen Films · Vie 27 nov | → Detalle de trabajo |
 | 3 | E · Estudio Marea · Cotizaciones aceptadas | → Detalle de cliente |
 | 4 | L · Lumen Films · Cotizaciones aceptadas | → Detalle de cliente |
 | 5 | C · Café Origen S.A.S. · Cotizaciones aceptadas | → Detalle de cliente |
@@ -226,19 +225,22 @@ Ninguno.
 | 11 | icono 0xe047 | cambia en la misma pantalla |
 | 12 | Guardar paquete | → Formulario de paquete + aviso (snackbar) |
 
-### Agendar trabajo (9 elementos tocables)
+### Agendar trabajo (12 elementos tocables)
 
 | # | Elemento | Resultado |
 |---|---|---|
 | 1 | Vincular una cotización · Cotización aceptada (opcional) | → Agendar trabajo + hoja inferior |
 | 2 | [campo de texto] | cambia en la misma pantalla |
 | 3 | Elegir cliente · Cliente | → Agendar trabajo + hoja inferior |
-| 4 | Dom 22 nov · Fecha | → Agendar trabajo + diálogo + selector de fecha |
+| 4 | Lun 23 nov · Fecha | → Agendar trabajo + diálogo + selector de fecha |
 | 5 | 8:00 am · Hora | → Agendar trabajo + diálogo + selector de hora |
 | 6 | [campo de texto] | cambia en la misma pantalla |
-| 7 | [interruptor] | cambia en la misma pantalla |
-| 8 | Crear evento en Calendar | → Agendar trabajo + aviso (snackbar) |
-| 9 | Cancelar | → ? |
+| 7 | Mar 24 nov · 23° Parcialmente nublado | cambia en la misma pantalla |
+| 8 | Mié 25 nov · 22° Nublado | cambia en la misma pantalla |
+| 9 | Sáb 28 nov · 27° Soleado | cambia en la misma pantalla |
+| 10 | [interruptor] | cambia en la misma pantalla |
+| 11 | Crear evento en Calendar | → Agendar trabajo + aviso (snackbar) |
+| 12 | Cancelar | → ? |
 
 ### Detalle de trabajo (5 elementos tocables)
 
@@ -259,7 +261,7 @@ Ninguno.
 | 3 | Correo | ⚠ sin cambio visible |
 | 4 | C · COT-0042 · Café Origen S.A.S. · Comercial 30" | → Detalle de cotización |
 | 5 | C · COT-0037 · Café Origen S.A.S. · Fotografía de producto | → Detalle de cotización |
-| 6 | F · Fotografía de producto · Jue 8 oct · 10:00 am · Jardín Botánico | → Detalle de trabajo |
+| 6 | F · Fotografía de producto · Vie 9 oct · 10:00 am · Jardín Botánico | → Detalle de trabajo |
 | 7 | Nueva cotización | → Nueva cotización |
 | 8 | Eliminar cliente | → Detalle de cliente + diálogo |
 

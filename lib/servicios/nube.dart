@@ -169,7 +169,9 @@ class ServicioNube extends ChangeNotifier {
   Future<void> conectar() async {
     if (!configurada) throw Exception('Supabase no está configurado en esta versión');
     await iniciar();
-    if (!servicioGoogle.conectado) await servicioGoogle.entrar();
+    // Supabase necesita el token fresco que da el selector de Google. Solo
+    // pasa la primera vez: luego Supabase guarda su propia sesión.
+    if (servicioGoogle.cuenta == null) await servicioGoogle.entrar();
     final idToken = servicioGoogle.cuenta?.authentication.idToken;
     if (idToken == null) throw Exception('Google no entregó el token de inicio de sesión');
     try {

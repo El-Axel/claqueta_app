@@ -1,7 +1,9 @@
 name: claqueta
 description: Claqueta - cotiza, agenda y cobra tus producciones audiovisuales.
 publish_to: 'none'
-version: 0.2.0+1
+# versión visible + número de compilación. Sube el número (+2, +3...) en cada
+# APK nueva: así Android la instala ENCIMA de la anterior sin borrar datos.
+version: 1.0.0+2
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -25,6 +27,26 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+
+# Ícono de la app (claqueta arena sobre degradado petróleo).
+# Se regenera con: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icono/logo_icono.png"
+  # Ícono adaptativo (Android 8+): cada celular lo recorta en su forma.
+  adaptive_icon_background: "assets/icono/fondo.png"
+  adaptive_icon_foreground: "assets/icono/frente.png"
+  # frente.png ya trae su margen (símbolo al 66 % del lienzo, dentro de la
+  # zona segura); sin margen extra para que no se vea pequeño.
+  adaptive_icon_foreground_inset: 0
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/icono/logo_icono.png"
+    background_color: "#0B1315"
+    theme_color: "#0B1315"
