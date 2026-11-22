@@ -1,6 +1,6 @@
 # Prueba clic por clic — Claqueta
 
-Generado por `test/recorrido_clics_test.dart` el 2026-11-21 23:13.
+Generado por `test/recorrido_clics_test.dart` el 2026-11-21 23:35.
 
 Cada fila es un toque hecho por la prueba automática, empezando siempre desde los datos de ejemplo. «⚠ sin cambio visible» significa que el toque no cambió de pantalla ni de contenido: hay que revisarlo a mano (puede ser un campo de texto o un botón que no hace nada).
 
@@ -37,7 +37,7 @@ Ninguno.
 
 | # | Elemento | Resultado |
 |---|---|---|
-| 1 | Continuar con Google | → Conectar con Google |
+| 1 | Soy realizador · Continuar con Google | → Conectar con Google |
 
 ### Conectar con Google (2 elementos tocables)
 

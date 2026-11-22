@@ -191,6 +191,8 @@ class DetalleTrabajo extends StatelessWidget {
     if (ok) {
       t.fecha = nueva;
       tienda.guardarTrabajo(t);
+      tienda.avisar(t.clienteId, 'rodaje',
+          'Reprogramé el rodaje "${t.titulo}" para el ${fechaLarga(nueva)} a las ${hora12(t.hora)}.');
       var aviso = 'Rodaje reprogramado para el ${fechaCorta(nueva)}';
       if (t.eventoId != null && servicioGoogle.conectado) {
         try {

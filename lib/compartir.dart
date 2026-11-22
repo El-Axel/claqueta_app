@@ -41,6 +41,15 @@ String mensajeRecordatorio(Cotizacion c, Cliente cl, Config cfg) {
       '$cuando. Si quieres ajustamos alcance o fechas. ${cfg.negocio}';
 }
 
+/// Invitación al espacio del cliente, con su código.
+String mensajeInvitacion(Cliente cl, Config cfg) =>
+    'Hola ${cl.nombre}, te invito a seguir tus proyectos conmigo en Claqueta: '
+    'ahí ves tus cotizaciones, las respondes, me pides nuevas y recibes novedades de tus rodajes.\n\n'
+    '1. Abre la app Claqueta.\n'
+    '2. Toca "Soy cliente · tengo un código".\n'
+    '3. Escribe tu código: ${cl.codigo}\n\n'
+    '${cfg.negocio}';
+
 String asuntoCotizacion(Cotizacion c) => 'Cotización ${folio(c.n)} - ${c.proyecto}';
 
 String mensajeAgenda(Trabajo t, Cliente cl, Config cfg) {

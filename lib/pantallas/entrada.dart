@@ -3,6 +3,7 @@ import '../tema.dart';
 import '../selectores.dart';
 import '../servicios/google_api.dart';
 import '../servicios/nube.dart';
+import 'cliente/codigo_cliente.dart';
 import '../tienda.dart';
 import '../widgets.dart';
 import 'principal.dart';
@@ -94,9 +95,17 @@ class _PantallaEntradaState extends State<PantallaEntrada> {
                 ],
               ),
               const Spacer(),
-              BotonClaqueta(cargando ? 'Conectando…' : 'Continuar con Google',
+              // Dos roles: el realizador entra con Google; el cliente, con
+              // el código de invitación que le envió su realizador.
+              BotonClaqueta(cargando ? 'Conectando…' : 'Soy realizador · Continuar con Google',
                   cargando ? null : continuar,
                   icono: Icons.login),
+              if (servicioNube.configurada) ...[
+                const SizedBox(height: 10),
+                BotonClaqueta('Soy cliente · tengo un código',
+                    cargando ? null : () => ir(context, const PantallaCodigoCliente()),
+                    tipo: 'secundario', icono: Icons.key_outlined),
+              ],
               const SizedBox(height: 12),
               Center(
                 child: Text(

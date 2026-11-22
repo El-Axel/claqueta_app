@@ -13,6 +13,85 @@ import 'nueva_cotizacion.dart';
 import 'detalle_cotizacion.dart';
 import 'agendar_trabajo.dart';
 import 'detalle_trabajo.dart';
+import '../servicios/nube.dart';
+
+String _nombreCliente(int id) {
+  for (final c in tienda.clientes) {
+    if (c.id == id) return c.nombre;
+  }
+  return 'Un cliente';
+}
+
+/// Solicitud de un cliente: verla y convertirla en cotización (o descartarla).
+Future<void> verSolicitud(BuildContext context, Map<String, dynamic> s) async {
+  final clienteId = s['cliente_id'] as int;
+  final fecha = s['fecha_tentativa'] == null ? null : DateTime.tryParse(s['fecha_tentativa'] as String);
+  final accion = await hojaInferior<String>(
+    context,
+    (ctx) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Solicitud de ${_nombreCliente(clienteId)}', style: estiloDisplay(tamano: 16)),
+        const SizedBox(height: 12),
+        Panel(
+          child: Column(children: [
+            FilaDato('Tipo', '${s['tipo']}'),
+            if (fecha != null) FilaDato('Fecha tentativa', fechaLarga(fecha)),
+            if ((s['lugar'] ?? '').toString().isNotEmpty) FilaDato('Lugar', '${s['lugar']}'),
+          ]),
+        ),
+        if ((s['descripcion'] ?? '').toString().isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text('${s['descripcion']}', style: estiloSuave(tamano: 14)),
+        ],
+        const SizedBox(height: 16),
+        BotonClaqueta('Crear cotización', () => Navigator.pop(ctx, 'cotizar'),
+            icono: Icons.description_outlined),
+        const SizedBox(height: 10),
+        BotonClaqueta('Descartar', () => Navigator.pop(ctx, 'descartar'), tipo: 'secundario'),
+      ],
+    ),
+  );
+  if (accion == null || !context.mounted) return;
+  try {
+    if (accion == 'cotizar') {
+      await servicioNube.marcarSolicitud(s['id'] as int, 'En cotización');
+      if (context.mounted) ir(context, NuevaCotizacion(clienteId: clienteId));
+    } else {
+      await servicioNube.marcarSolicitud(s['id'] as int, 'Descartada');
+    }
+  } catch (_) {
+    if (context.mounted) mostrarAviso(context, 'No se pudo actualizar la solicitud');
+  }
+}
+
+/// El cliente pidió cambios en una cotización.
+Future<void> verCambios(BuildContext context, Map<String, dynamic> r) async {
+  final n = r['cot_n'] as int;
+  final abrir = await hojaInferior<bool>(
+    context,
+    (ctx) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Cambios pedidos en ${folio(n)}', style: estiloDisplay(tamano: 16)),
+        const SizedBox(height: 10),
+        Text('"${r['mensaje'] ?? ''}"', style: estiloSuave(tamano: 15)),
+        const SizedBox(height: 16),
+        BotonClaqueta('Abrir la cotización', () => Navigator.pop(ctx, true),
+            icono: Icons.edit_note),
+        const SizedBox(height: 10),
+        BotonClaqueta('Marcar como visto', () => Navigator.pop(ctx, false), tipo: 'secundario'),
+      ],
+    ),
+  );
+  if (abrir == null || !context.mounted) return;
+  await servicioNube.marcarCambioVisto(r['id'] as int).catchError((_) {});
+  if (abrir && context.mounted && tienda.cotizacion(n) != null) {
+    ir(context, DetalleCotizacion(n));
+  }
+}
 
 class PestanaInicio extends StatelessWidget {
   const PestanaInicio({super.key});
@@ -20,7 +99,7 @@ class PestanaInicio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: tienda,
+      listenable: Listenable.merge([tienda, servicioNube]),
       builder: (context, _) {
         final abiertas = tienda.cotizaciones
             .where((c) => c.estado == estBorrador || c.estado == estEnviada)
@@ -31,6 +110,24 @@ class PestanaInicio extends StatelessWidget {
 
         // ---- Alertas inteligentes ----
         final avisos = <Widget>[];
+        // Lo que mandaron los clientes desde su espacio (va primero).
+        for (final s in servicioNube.solicitudesNuevas) {
+          avisos.add(Aviso(
+            'Solicitud nueva de ${_nombreCliente(s['cliente_id'] as int)}: ${s['tipo']}. Toca para cotizarla.',
+            icono: Icons.mark_email_unread_outlined,
+            color: Paleta.arena,
+            alTocar: () => verSolicitud(context, s),
+          ));
+        }
+        for (final r in servicioNube.cambiosPedidos) {
+          avisos.add(Aviso(
+            '${_nombreCliente(r['cliente_id'] as int)} pidió cambios en ${folio(r['cot_n'] as int)}: '
+            '"${r['mensaje'] ?? ''}"',
+            icono: Icons.rate_review_outlined,
+            color: Paleta.arena,
+            alTocar: () => verCambios(context, r),
+          ));
+        }
         for (final c in tienda.porSeguimiento) {
           final dias = diasDesde(c.enviada!);
           avisos.add(Aviso(

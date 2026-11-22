@@ -16,6 +16,9 @@ class Cliente {
   String correo;
   String telefono;
   String notas;
+  // Código de invitación (ej. CLQ-7K4M2P): con él el cliente entra a su
+  // espacio en la app y ve solo sus cotizaciones y rodajes.
+  String codigo;
 
   Cliente({
     required this.id,
@@ -23,6 +26,7 @@ class Cliente {
     this.correo = '',
     this.telefono = '',
     this.notas = '',
+    this.codigo = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -31,6 +35,7 @@ class Cliente {
         'correo': correo,
         'telefono': telefono,
         'notas': notas,
+        'codigo': codigo,
       };
 
   factory Cliente.fromJson(Map<String, dynamic> j) => Cliente(
@@ -39,6 +44,7 @@ class Cliente {
         correo: (j['correo'] ?? '') as String,
         telefono: (j['telefono'] ?? '') as String,
         notas: (j['notas'] ?? '') as String,
+        codigo: (j['codigo'] ?? '') as String,
       );
 }
 

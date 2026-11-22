@@ -21,8 +21,11 @@ Requisito del curso: mínimo 6 planificadas, al menos 3 completas y, si hay más
 | F10 | Persistencia local + nube (Supabase/PostgreSQL con seguridad por fila): copia automática y recuperación al reinstalar; exportar / restaurar / restablecer | Completa · probada el 22 nov 2026 (desinstalar → reinstalar → "Traerlos a este teléfono") | `tienda.dart`, `servicios/nube.dart`, `supabase/esquema.sql`, `ajustes.dart` | Ajustes → Nube "Al día" → desinstalar la app → instalar → iniciar sesión → aparecen los mismos datos |
 | F11 | Mapa, búsqueda de direcciones, clima real y plan B (fechas sin lluvia y sin cruces) | Completa | `servicios/lugares_api.dart` (OpenStreetMap/Nominatim), `servicios/clima_api.dart` (Open-Meteo), `widgets.dart` (`MapaLugar`, `TarjetaClima`) | Agendar → escribir "Parque Arví" → elegir resultado → aparece el mapa real y el pronóstico; "Cómo llegar" abre Google Maps. Más de 16 días: el clima se marca **Estimado** |
 | F12 | Login con Google, envío por Gmail (correo con la identidad de marca + PDF adjunto) y eventos en Google Calendar (crear, invitar, reprogramar, borrar) | Completa · probada con cuenta real el 22 nov 2026 (login, correo recibido en Gmail y evento visible en Google Calendar) | `servicios/google_api.dart`, `entrada.dart`, `envio_cotizacion.dart`, `agendar_trabajo.dart`, `detalle_trabajo.dart` | Requiere el ID de cliente (ver `docs/GOOGLE_CLOUD_SETUP.md`). Sin él, la app funciona en **modo demostración** y lo dice en pantalla |
+| F13 | Portal del cliente: entra con código de invitación (sin cuenta), ve sus cotizaciones y rodajes, acepta o pide cambios, crea solicitudes, ve pagos, historial y novedades | Completa · probada el 22 nov 2026 (cliente en web acepta COT-0044 → pasa a Aceptada en la app del realizador; solicitud del cliente aparece en el Inicio del realizador) | `pantallas/cliente/*`, `servicios/portal_cliente.dart`, `supabase/portal_cliente.sql` | Ficha del cliente → copiar código → otra sesión: "Soy cliente · tengo un código" → aceptar una cotización enviada |
 
-Conteo: **F1–F12 completas (12 de 12, 100 % del alcance)**.
+Conteo: **F1–F13 completas (13 de 13, 100 % del alcance)**. F13 cubre el requisito del
+integrador de una app para los clientes del negocio (identificación, solicitudes, estado,
+historial y novedades).
 La búsqueda de direcciones prioriza la ciudad donde estás (ubicación aproximada, con permiso al abrir "Agendar trabajo").
 
 ¿Por qué OpenStreetMap y Open-Meteo y no Google Maps/Weather? Las APIs de Google Maps

@@ -63,6 +63,17 @@ recuperas.
 Avísale a Claude para que reinicie la app en el emulador. Luego, en la app:
 **Ajustes → Nube → Conectar**. Desde ese momento cada cambio se guarda solo.
 
+## 6. Portal del cliente
+
+1. **SQL Editor → New query** → pega todo `supabase/portal_cliente.sql` → **Run**.
+   (Si avisa de operaciones "destructive", es por los `drop policy if exists`: confirma.)
+2. **Authentication → Sign In / Providers → User Signups** → activa
+   **Allow anonymous sign-ins** → **Save changes**.
+
+Cómo funciona: cada cliente tiene un código (`CLQ-XXXXXX`, se ve en la ficha del cliente).
+Se lo envías por WhatsApp; el cliente abre Claqueta → **Soy cliente · tengo un código** →
+escribe el código. Entra como usuario anónimo y la base de datos solo le deja ver lo suyo.
+
 ## Para la sustentación
 
 - La clave *anon* es pública a propósito: la protege la **seguridad por fila (RLS)**.

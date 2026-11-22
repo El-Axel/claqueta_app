@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../modelos.dart';
 import '../tienda.dart';
 import 'google_api.dart';
 
@@ -51,9 +52,26 @@ class ServicioNube extends ChangeNotifier {
   Timer? _espera;
 
   bool get configurada => _url.isNotEmpty && _anonKey.isNotEmpty;
+  bool get iniciada => _iniciado;
   SupabaseClient get _db => Supabase.instance.client;
-  bool get conectada => _iniciado && _db.auth.currentUser != null;
+
+  /// Cliente de Supabase para el portal del cliente.
+  SupabaseClient get db => _db;
+
+  /// Conectada COMO REALIZADOR (con Google). Un cliente entra como
+  /// usuario anónimo y nunca sube los datos del realizador.
+  bool get conectada {
+    if (!_iniciado) return false;
+    final u = _db.auth.currentUser;
+    return u != null && !u.isAnonymous;
+  }
+
   String get correo => conectada ? (_db.auth.currentUser!.email ?? '') : '';
+
+  // Bandeja del realizador: lo que mandan los clientes desde su espacio.
+  List<Map<String, dynamic>> solicitudesNuevas = [];
+  List<Map<String, dynamic>> cambiosPedidos = [];
+  Timer? _revision;
 
   /// Se llama una vez al abrir la app.
   Future<void> iniciar() async {
@@ -62,9 +80,83 @@ class ServicioNube extends ChangeNotifier {
     // porque la protege la seguridad por fila (RLS).
     await Supabase.initialize(url: _url, publishableKey: _anonKey);
     _iniciado = true;
-    // Cada cambio en la tienda programa una subida.
+    // Cada cambio en la tienda programa una subida, y cada novedad se
+    // publica para el cliente.
     tienda.alGuardar = _programarSubida;
+    tienda.alNovedad = (c, tipo, texto) => publicarNovedad(c, tipo, texto).catchError((_) {});
     _cambiar(conectada ? EstadoNube.alDia : EstadoNube.desconectado);
+    if (conectada) _empezarRevision();
+  }
+
+  /// Revisa la bandeja ahora y luego cada minuto.
+  void _empezarRevision() {
+    _revision?.cancel();
+    revisarBandeja().catchError((_) {});
+    _revision = Timer.periodic(
+        const Duration(minutes: 1), (_) => revisarBandeja().catchError((_) {}));
+  }
+
+  // ---------------- Portal del cliente (lado realizador) ----------------
+
+  /// Publica un aviso en el espacio del cliente.
+  Future<void> publicarNovedad(int clienteId, String tipo, String texto) async {
+    if (!conectada) return;
+    await _db.from('novedades').insert({
+      'realizador_id': _db.auth.currentUser!.id,
+      'cliente_id': clienteId,
+      'tipo': tipo,
+      'texto': texto,
+    });
+  }
+
+  /// Trae las solicitudes nuevas y las respuestas de los clientes.
+  /// - "Aceptar" se aplica sola: la cotización pasa a Aceptada.
+  /// - "Pedir cambios" queda en la bandeja hasta que el realizador la vea.
+  Future<void> revisarBandeja() async {
+    if (!conectada) return;
+    final uid = _db.auth.currentUser!.id;
+    final resp = await _db
+        .from('respuestas')
+        .select()
+        .eq('realizador_id', uid)
+        .eq('procesada', false)
+        .order('creada');
+    final cambios = <Map<String, dynamic>>[];
+    for (final r in resp) {
+      if (r['accion'] == 'aceptar') {
+        final n = r['cot_n'] as int;
+        final cot = tienda.cotizacion(n);
+        if (cot != null && cot.estado != estAceptada) {
+          tienda.cambiarEstado(n, estAceptada);
+        }
+        await _db.from('respuestas').update({'procesada': true}).eq('id', r['id'] as int);
+      } else {
+        cambios.add(Map<String, dynamic>.from(r));
+      }
+    }
+    final sol = await _db
+        .from('solicitudes')
+        .select()
+        .eq('realizador_id', uid)
+        .eq('estado', 'Nueva')
+        .order('creada');
+    cambiosPedidos = cambios;
+    solicitudesNuevas = sol.map((e) => Map<String, dynamic>.from(e)).toList();
+    notifyListeners();
+  }
+
+  /// El realizador ya vio el pedido de cambios.
+  Future<void> marcarCambioVisto(int id) async {
+    await _db.from('respuestas').update({'procesada': true}).eq('id', id);
+    cambiosPedidos.removeWhere((r) => r['id'] == id);
+    notifyListeners();
+  }
+
+  /// Cambia el estado de una solicitud (En cotización · Descartada).
+  Future<void> marcarSolicitud(int id, String estado) async {
+    await _db.from('solicitudes').update({'estado': estado}).eq('id', id);
+    solicitudesNuevas.removeWhere((s) => s['id'] == id);
+    notifyListeners();
   }
 
   void _cambiar(EstadoNube e, [String? err]) {
@@ -83,6 +175,7 @@ class ServicioNube extends ChangeNotifier {
     try {
       await _db.auth.signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
       _cambiar(EstadoNube.alDia);
+      _empezarRevision();
     } on AuthException catch (e) {
       _cambiar(EstadoNube.error, e.message);
       throw Exception('Supabase no aceptó el inicio de sesión: ${e.message}');
@@ -91,6 +184,9 @@ class ServicioNube extends ChangeNotifier {
 
   Future<void> desconectar() async {
     _espera?.cancel();
+    _revision?.cancel();
+    solicitudesNuevas = [];
+    cambiosPedidos = [];
     if (_iniciado) await _db.auth.signOut();
     _cambiar(configurada ? EstadoNube.desconectado : EstadoNube.sinConfigurar);
   }
@@ -195,6 +291,7 @@ Map<String, List<Map<String, dynamic>>> filasParaSubir(Map<String, dynamic> j, S
           'nombre': c['nombre'],
           'correo': c['correo'],
           'telefono': c['telefono'],
+          'codigo': (c['codigo'] ?? '') == '' ? null : c['codigo'],
           'datos': c,
           'actualizado': ahora, 'user_id': uid,
         }

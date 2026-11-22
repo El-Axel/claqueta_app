@@ -132,10 +132,18 @@ class Lienzo extends StatelessWidget {
 class DockNav extends StatelessWidget {
   final int actual;
   final ValueChanged<int> alElegir;
+  // Pestañas: [ícono, ícono activo, nombre]. Por defecto, las del realizador;
+  // el espacio del cliente pasa las suyas.
+  final List<List<dynamic>> items;
 
-  const DockNav({super.key, required this.actual, required this.alElegir});
+  const DockNav({
+    super.key,
+    required this.actual,
+    required this.alElegir,
+    this.items = itemsRealizador,
+  });
 
-  static const List<List<dynamic>> _items = [
+  static const List<List<dynamic>> itemsRealizador = [
     [Icons.home_outlined, Icons.home_rounded, 'Inicio'],
     [Icons.description_outlined, Icons.description, 'Cotizar'],
     [Icons.calendar_month_outlined, Icons.calendar_month, 'Agenda'],
@@ -165,12 +173,12 @@ class DockNav extends StatelessWidget {
             builder: (context, caja) {
               const chico = 46.0;
               const hueco = 4.0;
-              double grande = caja.maxWidth - (_items.length - 1) * (chico + hueco) - hueco;
+              double grande = caja.maxWidth - (items.length - 1) * (chico + hueco) - hueco;
               if (grande < chico) grande = chico;
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  for (int i = 0; i < _items.length; i++)
+                  for (int i = 0; i < items.length; i++)
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () => alElegir(i),
@@ -187,13 +195,13 @@ class DockNav extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon((actual == i ? _items[i][1] : _items[i][0]) as IconData,
+                            Icon((actual == i ? items[i][1] : items[i][0]) as IconData,
                                 size: 22, color: Paleta.suelo),
                             if (actual == i && grande > 80) ...[
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  _items[i][2] as String,
+                                  items[i][2] as String,
                                   maxLines: 1,
                                   softWrap: false,
                                   overflow: TextOverflow.clip,
