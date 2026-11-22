@@ -89,7 +89,7 @@ const nombresPestana = ['Inicio', 'Cotizar', 'Agenda', 'Finanzas', 'Clientes'];
 final List<String> errores = [];
 
 Future<void> montar(WidgetTester t, Caso c) async {
-  tienda.restablecer();
+  tienda.cargarEjemplos();
   tienda.sesion = c.sesion;
   pestana.value = c.pestana;
   await t.pumpWidget(MaterialApp(

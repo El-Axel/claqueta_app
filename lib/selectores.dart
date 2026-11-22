@@ -22,6 +22,13 @@ Future<void> conectarNube(BuildContext context) async {
       if (context.mounted) mostrarAviso(context, 'Tus datos quedaron guardados en la nube');
       return;
     }
+    // Teléfono vacío (instalación nueva): se traen los datos sin preguntar,
+    // para no ofrecer "reemplazar la nube" con nada.
+    if (tienda.estaVacia) {
+      await servicioNube.bajar();
+      if (context.mounted) mostrarAviso(context, 'Recuperé tus datos de la nube');
+      return;
+    }
     if (!context.mounted) return;
     final fecha = r.actualizado == null ? '' : ' (última copia: ${fechaCorta(r.actualizado!)})';
     final traer = await hojaInferior<bool>(

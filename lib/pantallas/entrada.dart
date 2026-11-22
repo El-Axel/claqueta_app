@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../tema.dart';
 import '../selectores.dart';
 import '../servicios/google_api.dart';
@@ -97,23 +99,37 @@ class _PantallaEntradaState extends State<PantallaEntrada> {
               const Spacer(),
               // Dos roles: el realizador entra con Google; el cliente, con
               // el código de invitación que le envió su realizador.
-              BotonClaqueta(cargando ? 'Conectando…' : 'Soy realizador · Continuar con Google',
-                  cargando ? null : continuar,
-                  icono: Icons.login),
-              if (servicioNube.configurada) ...[
-                const SizedBox(height: 10),
+              // En la WEB la app es el espacio del cliente: el realizador
+              // trabaja en la app de Android (Gmail/Calendar reales).
+              if (kIsWeb) ...[
                 BotonClaqueta('Soy cliente · tengo un código',
-                    cargando ? null : () => ir(context, const PantallaCodigoCliente()),
-                    tipo: 'secundario', icono: Icons.key_outlined),
+                    () => ir(context, const PantallaCodigoCliente()),
+                    icono: Icons.key_outlined),
+                const SizedBox(height: 10),
+                BotonClaqueta('Soy realizador · descargar la app',
+                    () => _realizadorEnWeb(context),
+                    tipo: 'secundario', icono: Icons.android),
+              ] else ...[
+                BotonClaqueta(cargando ? 'Conectando…' : 'Soy realizador · Continuar con Google',
+                    cargando ? null : continuar,
+                    icono: Icons.login),
+                if (servicioNube.configurada) ...[
+                  const SizedBox(height: 10),
+                  BotonClaqueta('Soy cliente · tengo un código',
+                      cargando ? null : () => ir(context, const PantallaCodigoCliente()),
+                      tipo: 'secundario', icono: Icons.key_outlined),
+                ],
               ],
               const SizedBox(height: 12),
               Center(
                 child: Text(
-                    !servicioGoogle.real
-                        ? 'Modo demostración: Google no está configurado en esta versión'
-                        : servicioNube.configurada
-                            ? 'Tus datos se guardan en el teléfono y en la nube'
-                            : 'Tus datos se guardan en este dispositivo',
+                    kIsWeb
+                        ? 'Espacio del cliente · el realizador usa la app de Android'
+                        : !servicioGoogle.real
+                            ? 'Modo demostración: Google no está configurado en esta versión'
+                            : servicioNube.configurada
+                                ? 'Tus datos se guardan en el teléfono y en la nube'
+                                : 'Tus datos se guardan en este dispositivo',
                     textAlign: TextAlign.center,
                     style: estiloSuave()),
               ),
@@ -124,6 +140,39 @@ class _PantallaEntradaState extends State<PantallaEntrada> {
     );
   }
 }
+
+/// Dónde se descarga la última versión de la app de Android (APK).
+const String enlaceApk = 'https://github.com/El-Axel/claqueta_app/releases/latest';
+
+/// En la web, el realizador ve dónde descargar la app de Android.
+Future<void> _realizadorEnWeb(BuildContext context) => hojaInferior<void>(
+      context,
+      (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Claqueta para realizadores', style: estiloDisplay(tamano: 16)),
+          const SizedBox(height: 8),
+          Text(
+            'Cotizar, agendar, cobrar y enviar por Gmail y Calendar se hace en la app de '
+            'Android. Descárgala, instálala y entra con tu cuenta de Google: tus datos se '
+            'guardan en la nube.',
+            style: estiloSuave(tamano: 14),
+          ),
+          const SizedBox(height: 16),
+          BotonClaqueta('Descargar la app (Android)', () async {
+            var ok = false;
+            try {
+              ok = await launchUrl(Uri.parse(enlaceApk), mode: LaunchMode.externalApplication);
+            } catch (_) {}
+            if (!ok && ctx.mounted) mostrarAviso(ctx, 'No se pudo abrir el enlace de descarga');
+          }, icono: Icons.download_outlined),
+          const SizedBox(height: 10),
+          Text('En iPhone y en el navegador, Claqueta funciona como espacio del cliente.',
+              style: estiloSuave(tamano: 12)),
+        ],
+      ),
+    );
 
 class PantallaGoogle extends StatefulWidget {
   const PantallaGoogle({super.key});
@@ -136,6 +185,8 @@ class _PantallaGoogleState extends State<PantallaGoogle> {
   int paso = 0; // 0 = elegir cuenta, 1 = permisos
 
   void entrar() {
+    // En modo demostración se muestran datos de ejemplo si no hay nada.
+    if (tienda.estaVacia) tienda.cargarEjemplos();
     tienda.iniciarSesion();
     Navigator.pushAndRemoveUntil(
       context,
@@ -153,9 +204,10 @@ class _PantallaGoogleState extends State<PantallaGoogle> {
             ? [
                 const Encabezado('Elige una cuenta', subtitulo: 'para continuar a Claqueta'),
                 espacio(20),
+                // Cuenta ficticia: esta pantalla es solo una demostración.
                 FilaItem(
-                  titulo: 'Alexander Pino Caro',
-                  subtitulo: 'alexpinocaro@gmail.com',
+                  titulo: 'Cuenta de demostración',
+                  subtitulo: 'demo@claqueta.app',
                   alTocar: () => setState(() => paso = 1),
                 ),
                 FilaItem(
@@ -169,7 +221,7 @@ class _PantallaGoogleState extends State<PantallaGoogle> {
                     style: estiloSuave(tamano: 13)),
               ]
             : [
-                const Encabezado('Claqueta quiere acceso', subtitulo: 'alexpinocaro@gmail.com'),
+                const Encabezado('Claqueta quiere acceso', subtitulo: 'demo@claqueta.app'),
                 espacio(20),
                 const Panel(
                   child: Column(

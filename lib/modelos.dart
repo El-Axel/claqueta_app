@@ -332,12 +332,14 @@ class Config {
   String logo;
 
   Config({
-    this.web = 'alexpino.netlify.app',
-    this.logo = 'https://alexpino.netlify.app/assets/img/apple-touch-icon.png',
+    // Vacíos por defecto: cada usuario pone los suyos (sin logo, el correo
+    // usa la inicial del negocio).
+    this.web = '',
+    this.logo = '',
     this.ciudad = '', // vacío = aún sin zona (se usan las coordenadas de Medellín)
     this.lat = 6.2476,
     this.lon = -75.5658,
-    this.negocio = 'Alexander Pino - Realizador audiovisual',
+    this.negocio = 'Mi negocio', // se cambia en Ajustes → Mi negocio
     this.telefono = '',
     this.iva = false,
     this.vigenciaDias = 15,
@@ -371,8 +373,8 @@ class Config {
         ciudad: (j['ciudad'] ?? '') as String,
         lat: ((j['lat'] ?? 6.2476) as num).toDouble(),
         lon: ((j['lon'] ?? -75.5658) as num).toDouble(),
-        web: (j['web'] ?? 'alexpino.netlify.app') as String,
-        logo: (j['logo'] ?? 'https://alexpino.netlify.app/assets/img/apple-touch-icon.png') as String,
+        web: (j['web'] ?? '') as String,
+        logo: (j['logo'] ?? '') as String,
       );
 }
 
