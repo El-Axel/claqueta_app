@@ -7,15 +7,32 @@ import 'servicios/nube.dart';
 import 'servicios/ubicacion.dart';
 import 'util.dart';
 
-/// Conecta la nube (Supabase) y decide qué hacer con los datos:
-/// - Nube vacía: sube los datos de este teléfono.
-/// - Nube con datos: pregunta si traerlos (p. ej. tras reinstalar) o
-///   reemplazarlos con los del teléfono.
+/// Entra a la nube con Google (para quien empezó con Google) y sincroniza.
 /// No interrumpe si falla: la app sigue funcionando en el teléfono.
 Future<void> conectarNube(BuildContext context) async {
   if (!servicioNube.configurada) return;
   try {
     await servicioNube.conectar();
+  } catch (e) {
+    if (context.mounted) {
+      mostrarAviso(context, 'Nube: ${e.toString().replaceFirst('Exception: ', '')}');
+    }
+    return;
+  }
+  if (context.mounted) await sincronizarCuenta(context);
+}
+
+/// Con la cuenta ya abierta, decide qué hacer con los datos:
+/// - Si este teléfono tenía datos de OTRA cuenta, se vacían (solo aquí).
+/// - Nube vacía: sube los datos de este teléfono.
+/// - Teléfono vacío: trae los de la nube.
+/// - Ambos con datos: pregunta (traer o reemplazar).
+Future<void> sincronizarCuenta(BuildContext context) async {
+  if (!servicioNube.conectada) return;
+  try {
+    final uid = servicioNube.uid;
+    if (tienda.dueno.isNotEmpty && tienda.dueno != uid) tienda.vaciarLocal();
+    tienda.fijarDueno(uid);
     final r = await servicioNube.resumen();
     if (r.vacia) {
       await servicioNube.subir();

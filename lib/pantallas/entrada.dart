@@ -6,15 +6,17 @@ import '../selectores.dart';
 import '../servicios/google_api.dart';
 import '../servicios/nube.dart';
 import 'cliente/codigo_cliente.dart';
+import 'cuenta.dart';
 import '../tienda.dart';
 import '../widgets.dart';
 import 'principal.dart';
 import '../estilo.dart';
 
-// Pantalla de entrada: logo, tagline y botón de Google.
-// - Con Google configurado: abre el selector real de cuentas y pide
-//   solo los permisos gmail.send y calendar.events.
-// - Sin configurar (o en web): MODO DEMOSTRACIÓN con los mismos pasos.
+// Pantalla de entrada: logo, tagline y botones por rol.
+// - Realizador (Android): crea su cuenta o entra con correo y contraseña.
+//   Quien empezó con Google puede seguir entrando con Google.
+// - Cliente: entra con el código de invitación.
+// - Sin nube configurada: MODO DEMOSTRACIÓN.
 class PantallaEntrada extends StatefulWidget {
   const PantallaEntrada({super.key});
 
@@ -34,7 +36,7 @@ class _PantallaEntradaState extends State<PantallaEntrada> {
     try {
       await servicioGoogle.entrar();
       if (!mounted) return;
-      // Nube: recupera los datos si ya existían (p. ej. tras reinstalar).
+      // Nube: entra con Google y recupera los datos si ya existían.
       await conectarNube(context);
       if (!mounted) return;
       tienda.iniciarSesion();
@@ -109,27 +111,40 @@ class _PantallaEntradaState extends State<PantallaEntrada> {
                 BotonClaqueta('Soy realizador · descargar la app',
                     () => _realizadorEnWeb(context),
                     tipo: 'secundario', icono: Icons.android),
+              ] else if (servicioNube.configurada) ...[
+                // Realizador: primero su CUENTA (correo y contraseña);
+                // Google se conecta después, en Ajustes.
+                BotonClaqueta('Soy realizador · crear cuenta',
+                    cargando ? null : () => ir(context, const PantallaCuenta(crear: true)),
+                    icono: Icons.person_add_alt_1_outlined),
+                const SizedBox(height: 10),
+                BotonClaqueta('Ya tengo cuenta',
+                    cargando ? null : () => ir(context, const PantallaCuenta(crear: false)),
+                    tipo: 'secundario', icono: Icons.login),
+                const SizedBox(height: 10),
+                BotonClaqueta('Soy cliente · tengo un código',
+                    cargando ? null : () => ir(context, const PantallaCodigoCliente()),
+                    tipo: 'secundario', icono: Icons.key_outlined),
+                if (servicioGoogle.real)
+                  Center(
+                    child: TextButton(
+                      onPressed: cargando ? null : continuar,
+                      child: Text(cargando ? 'Conectando…' : 'Empecé con Google · entrar con Google',
+                          style: estiloSuave(tamano: 13)),
+                    ),
+                  ),
               ] else ...[
-                BotonClaqueta(cargando ? 'Conectando…' : 'Soy realizador · Continuar con Google',
-                    cargando ? null : continuar,
+                BotonClaqueta('Entrar (demostración)', () => ir(context, const PantallaGoogle()),
                     icono: Icons.login),
-                if (servicioNube.configurada) ...[
-                  const SizedBox(height: 10),
-                  BotonClaqueta('Soy cliente · tengo un código',
-                      cargando ? null : () => ir(context, const PantallaCodigoCliente()),
-                      tipo: 'secundario', icono: Icons.key_outlined),
-                ],
               ],
               const SizedBox(height: 12),
               Center(
                 child: Text(
                     kIsWeb
                         ? 'Espacio del cliente · el realizador usa la app de Android'
-                        : !servicioGoogle.real
-                            ? 'Modo demostración: Google no está configurado en esta versión'
-                            : servicioNube.configurada
-                                ? 'Tus datos se guardan en el teléfono y en la nube'
-                                : 'Tus datos se guardan en este dispositivo',
+                        : servicioNube.configurada
+                            ? 'Tus datos se guardan en el teléfono y en tu cuenta en la nube'
+                            : 'Modo demostración: la nube no está configurada en esta versión',
                     textAlign: TextAlign.center,
                     style: estiloSuave()),
               ),

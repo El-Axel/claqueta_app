@@ -17,8 +17,9 @@ import 'google_api.dart';
 //   Supabase ("debounce": si haces 5 cambios seguidos, sube una vez).
 // - Al iniciar sesión en un teléfono nuevo, la app ofrece traer los
 //   datos de la nube.
-// - Para entrar a Supabase se reutiliza el inicio de sesión de Google
-//   (el "ID token" que Google entrega a la app).
+// - El realizador entra con su CUENTA (correo y contraseña de Supabase
+//   Auth). Google es aparte y opcional: solo para Gmail y Calendar.
+//   (Quien empezó con Google puede seguir entrando con Google.)
 // - Seguridad: cada fila lleva el user_id del dueño y la base de datos
 //   (RLS) solo deja ver/cambiar las propias filas.
 //
@@ -58,7 +59,7 @@ class ServicioNube extends ChangeNotifier {
   /// Cliente de Supabase para el portal del cliente.
   SupabaseClient get db => _db;
 
-  /// Conectada COMO REALIZADOR (con Google). Un cliente entra como
+  /// Conectada COMO REALIZADOR (con su cuenta). Un cliente entra como
   /// usuario anónimo y nunca sube los datos del realizador.
   bool get conectada {
     if (!_iniciado) return false;
@@ -165,10 +166,77 @@ class ServicioNube extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Entra a Supabase con la cuenta de Google ya conectada en la app.
-  Future<void> conectar() async {
-    if (!configurada) throw Exception('Supabase no está configurado en esta versión');
+  // ---------------- Cuenta del realizador ----------------
+  // La cuenta vive en Supabase Auth: el correo y la contraseña se guardan
+  // en el servidor de Supabase (la contraseña cifrada con bcrypt, nunca en
+  // texto plano). La app NO guarda la contraseña: solo la sesión (un token
+  // que Supabase renueva solo), por eso no hay que volver a escribirla.
+
+  /// Crea una cuenta nueva con correo y contraseña.
+  Future<void> crearCuenta(String correo, String clave, {String nombre = ''}) async {
+    await _antesDeEntrar();
+    try {
+      final r = await _db.auth.signUp(
+        email: correo.trim(),
+        password: clave,
+        data: nombre.trim().isEmpty ? null : {'nombre': nombre.trim()},
+      );
+      if (r.session == null) {
+        // El proyecto pide confirmar el correo antes de entrar.
+        throw Exception('Te enviamos un correo para confirmar la cuenta. '
+            'Ábrelo y luego entra con "Ya tengo cuenta".');
+      }
+      _alEntrar();
+    } on AuthException catch (e) {
+      throw Exception(mensajeAuth(e));
+    }
+  }
+
+  /// Entra con una cuenta que ya existe.
+  Future<void> entrarConCorreo(String correo, String clave) async {
+    await _antesDeEntrar();
+    try {
+      await _db.auth.signInWithPassword(email: correo.trim(), password: clave);
+      _alEntrar();
+    } on AuthException catch (e) {
+      throw Exception(mensajeAuth(e));
+    }
+  }
+
+  /// Pone (o cambia) la contraseña de la cuenta abierta. Sirve para quien
+  /// entró con Google y quiere poder entrar también con correo y contraseña.
+  Future<void> cambiarClave(String clave) async {
+    if (!conectada) throw Exception('Primero entra a tu cuenta');
+    try {
+      await _db.auth.updateUser(UserAttributes(password: clave));
+    } on AuthException catch (e) {
+      throw Exception(mensajeAuth(e));
+    }
+  }
+
+  /// Nombre con el que se creó la cuenta (si lo hay).
+  String get nombreCuenta =>
+      conectada ? '${_db.auth.currentUser!.userMetadata?['nombre'] ?? ''}' : '';
+
+  /// Id de la cuenta abierta ('' si no hay).
+  String get uid => conectada ? _db.auth.currentUser!.id : '';
+
+  Future<void> _antesDeEntrar() async {
+    if (!configurada) throw Exception('La nube no está configurada en esta versión');
     await iniciar();
+    // Si había un cliente (anónimo) abierto en este teléfono, se cierra.
+    final u = _db.auth.currentUser;
+    if (u != null && u.isAnonymous) await _db.auth.signOut();
+  }
+
+  void _alEntrar() {
+    _cambiar(EstadoNube.alDia);
+    _empezarRevision();
+  }
+
+  /// Entra a Supabase con Google (opción para quien ya usaba Google).
+  Future<void> conectar() async {
+    await _antesDeEntrar();
     // Supabase necesita el token fresco que da el selector de Google. Solo
     // pasa la primera vez: luego Supabase guarda su propia sesión.
     if (servicioGoogle.cuenta == null) await servicioGoogle.entrar();
@@ -176,8 +244,7 @@ class ServicioNube extends ChangeNotifier {
     if (idToken == null) throw Exception('Google no entregó el token de inicio de sesión');
     try {
       await _db.auth.signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
-      _cambiar(EstadoNube.alDia);
-      _empezarRevision();
+      _alEntrar();
     } on AuthException catch (e) {
       _cambiar(EstadoNube.error, e.message);
       throw Exception('Supabase no aceptó el inicio de sesión: ${e.message}');
@@ -347,4 +414,30 @@ int _totalDe(Map<String, dynamic> c) {
   final base = subtotal - desc;
   final iva = (c['iva'] ?? false) == true ? (base * 0.19).round() : 0;
   return base + iva;
+}
+
+/// Traduce los errores de Supabase Auth a mensajes claros en español.
+String mensajeAuth(AuthException e) {
+  final c = e.code ?? '';
+  final m = e.message.toLowerCase();
+  if (c == 'invalid_credentials' || m.contains('invalid login')) {
+    return 'Correo o contraseña incorrectos';
+  }
+  if (c == 'email_not_confirmed' || m.contains('not confirmed')) {
+    return 'Falta confirmar el correo: revisa tu bandeja de entrada';
+  }
+  if (c == 'user_already_exists' || m.contains('already registered')) {
+    return 'Ya existe una cuenta con ese correo. Entra con "Ya tengo cuenta"';
+  }
+  if (c == 'weak_password' || m.contains('password should be')) {
+    return 'La contraseña es muy débil: usa al menos 6 caracteres';
+  }
+  if (c == 'email_address_invalid' || m.contains('invalid format')) {
+    return 'Ese correo no es válido';
+  }
+  if (c == 'over_email_send_rate_limit' || c == 'over_request_rate_limit') {
+    return 'Demasiados intentos seguidos. Espera unos minutos';
+  }
+  if (c == 'signup_disabled') return 'Por ahora no se pueden crear cuentas nuevas';
+  return e.message;
 }

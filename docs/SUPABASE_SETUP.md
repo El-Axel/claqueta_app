@@ -1,8 +1,9 @@
 # Conectar Claqueta a Supabase (paso a paso)
 
 Supabase guarda tus datos (clientes, cotizaciones, catálogo, trabajos, ajustes) en la
-nube. Si desinstalas la app o cambias de teléfono, al iniciar sesión con Google los
-recuperas.
+nube. Si desinstalas la app o cambias de teléfono, al entrar con tu cuenta (correo y
+contraseña, o Google si empezaste así) los recuperas. Ver también [CUENTAS.md](CUENTAS.md):
+hay que **desactivar "Confirm email"** para que otras personas puedan crear su cuenta.
 
 > **Regla:** en ningún paso hay que pagar. Si Supabase pide tarjeta, "Upgrade" o
 > "Pro", **para y avisa**. Y nunca pegues claves en el chat.

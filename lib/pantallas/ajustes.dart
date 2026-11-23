@@ -8,6 +8,7 @@ import '../tema.dart';
 import '../tienda.dart';
 import '../widgets.dart';
 import 'catalogo.dart';
+import 'cuenta.dart';
 import 'entrada.dart';
 import '../estilo.dart';
 
@@ -20,6 +21,52 @@ class PantallaAjustes extends StatelessWidget {
     ['calendar', 'Google Calendar', 'Crear eventos de rodaje'],
     ['gmail', 'Gmail', 'Solo enviar cotizaciones'],
   ];
+
+  Future<void> _desconectarGoogle(BuildContext context) async {
+    final ok = await confirmar(
+      context,
+      titulo: '¿Quitar Google?',
+      mensaje: 'Tu cuenta y tus datos siguen igual. Solo se deja de enviar por Gmail y de agendar en Calendar.',
+      boton: 'Quitar',
+    );
+    if (!ok) return;
+    await servicioGoogle.salir().catchError((_) {});
+    if (context.mounted) mostrarAviso(context, 'Google desconectado');
+  }
+
+  /// Pone o cambia la contraseña (útil si entraste con Google).
+  Future<void> _cambiarClave(BuildContext context) async {
+    final c = TextEditingController();
+    final clave = await hojaInferior<String>(
+      context,
+      (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Nueva contraseña', style: estiloDisplay(tamano: 16)),
+          const SizedBox(height: 4),
+          Text('Con ella entras con ${servicioNube.correo} en cualquier teléfono.',
+              style: estiloSuave(tamano: 13)),
+          const SizedBox(height: 14),
+          TextField(
+            controller: c,
+            autofocus: true,
+            obscureText: true,
+            decoration: decoracionCampo('Contraseña', ayuda: 'Mínimo 6 caracteres'),
+            onSubmitted: (v) => Navigator.pop(ctx, v),
+          ),
+          const SizedBox(height: 14),
+          BotonClaqueta('Guardar contraseña', () => Navigator.pop(ctx, c.text)),
+        ],
+      ),
+    );
+    if (clave == null || !context.mounted) return;
+    if (clave.length < 6) {
+      mostrarAviso(context, 'La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    await _accionNube(context, () => servicioNube.cambiarClave(clave), 'Contraseña guardada');
+  }
 
   Future<void> _conectarGoogle(BuildContext context) async {
     try {
@@ -37,7 +84,15 @@ class PantallaAjustes extends StatelessWidget {
       builder: (context, _) {
         final cfg = tienda.config;
         final g = servicioGoogle;
-        final nombre = g.conectado && g.nombre.isNotEmpty ? g.nombre : 'Tu cuenta';
+        // La identidad es la CUENTA de Claqueta; Google es solo una conexión.
+        final n = servicioNube;
+        final nombre = n.nombreCuenta.isNotEmpty
+            ? n.nombreCuenta
+            : cfg.negocio.isNotEmpty && cfg.negocio != 'Mi negocio'
+                ? cfg.negocio
+                : g.conectado && g.nombre.isNotEmpty
+                    ? g.nombre
+                    : 'Tu cuenta';
         return Lienzo(
           appBar: barra('Ajustes'),
           body: ListView(
@@ -60,23 +115,57 @@ class PantallaAjustes extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                           Text(
-                              g.conectado
-                                  ? g.correo
-                                  : g.real
-                                      ? 'Google sin conectar'
+                              n.conectada
+                                  ? n.correo
+                                  : n.configurada
+                                      ? 'Sin cuenta abierta'
                                       : 'Modo demostración',
                               overflow: TextOverflow.ellipsis,
                               style: estiloSuave(tamano: 13)),
                         ],
                       ),
                     ),
-                    if (g.conectado)
-                      const Etiqueta('Conectado')
-                    else if (g.real)
+                    if (n.conectada)
+                      const Etiqueta('Cuenta')
+                    else if (n.configurada)
                       TextButton(
-                          onPressed: () => _conectarGoogle(context), child: const Text('Conectar'))
+                          onPressed: () => ir(context, const PantallaCuenta(crear: false)),
+                          child: const Text('Entrar'))
                     else
                       Etiqueta('Demo', color: Paleta.tinta.withAlpha(150)),
+                  ],
+                ),
+              ),
+              // ---------- Google: solo para Gmail y Calendar ----------
+              const TituloSeccion('Google (Gmail y Calendar)'),
+              Panel(
+                relleno: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.g_mobiledata, size: 28, color: Paleta.arena),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(g.conectado ? g.correo : 'Sin conectar',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Text(
+                              g.real
+                                  ? 'Para enviar cotizaciones por Gmail y agendar en Calendar. Puede ser un correo distinto al de tu cuenta.'
+                                  : 'Modo demostración: Google no está configurado en esta versión.',
+                              style: estiloSuave(tamano: 12)),
+                        ],
+                      ),
+                    ),
+                    if (g.conectado)
+                      TextButton(
+                          onPressed: () => _desconectarGoogle(context),
+                          child: const Text('Quitar'))
+                    else if (g.real)
+                      TextButton(
+                          onPressed: () => _conectarGoogle(context), child: const Text('Conectar')),
                   ],
                 ),
               ),
@@ -157,9 +246,9 @@ class PantallaAjustes extends StatelessWidget {
                         children: [
                           if (!servicioNube.conectada)
                             TextButton.icon(
-                              onPressed: () => conectarNube(context),
-                              icon: const Icon(Icons.cloud_sync_outlined, size: 18),
-                              label: const Text('Conectar'),
+                              onPressed: () => ir(context, const PantallaCuenta(crear: false)),
+                              icon: const Icon(Icons.login, size: 18),
+                              label: const Text('Entrar a mi cuenta'),
                             )
                           else ...[
                             TextButton.icon(
@@ -175,6 +264,11 @@ class PantallaAjustes extends StatelessWidget {
                                   : () => _traerDeNube(context),
                               icon: const Icon(Icons.cloud_download_outlined, size: 18),
                               label: const Text('Traer de la nube'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _cambiarClave(context),
+                              icon: const Icon(Icons.password_outlined, size: 18),
+                              label: const Text('Contraseña'),
                             ),
                           ],
                         ],
@@ -342,7 +436,9 @@ class PantallaAjustes extends StatelessWidget {
                   tipo: 'secundario', icono: Icons.inventory_2_outlined),
               const TituloSeccion('Copia de seguridad'),
               Text(
-                'Tus datos viven solo en este dispositivo. Exporta una copia para no perderlos si borras los datos de la app.',
+                servicioNube.conectada
+                    ? 'Tus datos ya se guardan en tu cuenta. Además puedes exportar una copia en texto.'
+                    : 'Tus datos viven solo en este dispositivo. Exporta una copia para no perderlos si borras los datos de la app.',
                 style: estiloSuave(tamano: 13),
               ),
               const SizedBox(height: 10),
@@ -394,7 +490,9 @@ class PantallaAjustes extends StatelessWidget {
                 final ok = await confirmar(
                   context,
                   titulo: '¿Cerrar sesión?',
-                  mensaje: 'Tus datos siguen guardados en este dispositivo.',
+                  mensaje: servicioNube.conectada
+                      ? 'Tus datos quedan guardados en tu cuenta. Para volver, entra de nuevo con tu cuenta.'
+                      : 'Tus datos siguen guardados en este dispositivo.',
                   boton: 'Cerrar sesión',
                   peligro: true,
                 );
@@ -410,7 +508,7 @@ class PantallaAjustes extends StatelessWidget {
                 }
               }, tipo: 'peligro', icono: Icons.logout),
               const SizedBox(height: 20),
-              Center(child: Text('Claqueta v0.2 · avance de proyecto', style: estiloSuave())),
+              Center(child: Text('Claqueta 1.0.2', style: estiloSuave())),
             ],
           ),
         );
