@@ -9,6 +9,7 @@ import 'package:claqueta/servicios/lugares_api.dart';
 import 'package:claqueta/servicios/nube.dart';
 import 'package:claqueta/tienda.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 import 'package:claqueta/util.dart';
 
 // Pruebas de las integraciones que no necesitan internet.
@@ -90,6 +91,31 @@ void main() {
     expect(t.clientes.every((c) => c.codigo.startsWith('CLQ-')), isTrue);
     t.borrarTodo();
     expect(t.estaVacia, isTrue);
+  });
+
+  test('Si entra otra cuenta, el teléfono se vacía sin tocar la nube', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    final t = Tienda();
+    await t.cargar();
+    var subidas = 0;
+    t.alGuardar = () => subidas++;
+    t.cargarEjemplos();
+    t.fijarDueno('cuenta-A');
+    final antes = subidas;
+    t.vaciarLocal();
+    expect(t.estaVacia, isTrue);
+    expect(subidas, antes); // no programa subida: no borra la nube
+    expect(t.dueno, 'cuenta-A');
+  });
+
+  test('Los errores de la cuenta se explican en español', () {
+    expect(mensajeAuth(const AuthException('Invalid login credentials', code: 'invalid_credentials')),
+        'Correo o contraseña incorrectos');
+    expect(mensajeAuth(const AuthException('User already registered', code: 'user_already_exists')),
+        contains('Ya existe una cuenta'));
+    expect(mensajeAuth(const AuthException('Password should be at least 6 characters', code: 'weak_password')),
+        contains('6 caracteres'));
   });
 
   test('Solo se piden los permisos mínimos de Google', () {

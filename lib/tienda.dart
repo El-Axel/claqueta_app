@@ -188,6 +188,22 @@ class Tienda extends ChangeNotifier {
     _cambio();
   }
 
+  // ---------- Dueño de los datos del teléfono ----------
+  // Guarda QUÉ cuenta es dueña de los datos de este teléfono. Si entra
+  // otra cuenta, se vacía el teléfono antes de sincronizar: así los datos
+  // de una persona nunca terminan en la cuenta de otra.
+  static const String _claveDueno = 'claqueta-dueno';
+  String get dueno => _prefs?.getString(_claveDueno) ?? '';
+  void fijarDueno(String uid) => _prefs?.setString(_claveDueno, uid);
+
+  /// Vacía SOLO este teléfono (no toca la nube).
+  void vaciarLocal() {
+    _vaciar();
+    config = Config();
+    _prefs?.setString(_clave, jsonEncode(_aJson()));
+    notifyListeners();
+  }
+
   // ---------- Sesión ----------
   void iniciarSesion() {
     sesion = true;
