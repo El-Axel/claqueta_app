@@ -46,12 +46,27 @@ class Tienda extends ChangeNotifier {
         if (_asegurarCodigos()) _prefs!.setString(_clave, jsonEncode(_aJson()));
         return;
       } catch (_) {
-        // Si los datos guardados están dañados, se empieza con datos de ejemplo.
+        // Si los datos guardados están dañados, se empieza en blanco.
       }
     }
-    _sembrar();
-    _asegurarCodigos();
+    // Usuario nuevo: empieza VACÍO para llenar sus propios clientes y
+    // servicios. Los datos de ejemplo se cargan a mano desde Ajustes.
+    _vaciar();
   }
+
+  /// Deja todo en blanco (sin clientes, catálogo, cotizaciones ni trabajos).
+  void _vaciar() {
+    clientes = [];
+    servicios = [];
+    paquetes = [];
+    cotizaciones = [];
+    trabajos = [];
+  }
+
+  /// ¿No hay nada creado todavía? (sirve para no pisar la nube con un
+  /// teléfono vacío).
+  bool get estaVacia =>
+      clientes.isEmpty && servicios.isEmpty && cotizaciones.isEmpty && trabajos.isEmpty;
 
   /// Se llama después de cada cambio guardado. La usa la nube (Supabase)
   /// para subir los datos. Es una "función gancho": la tienda no sabe
@@ -154,10 +169,22 @@ class Tienda extends ChangeNotifier {
     }
   }
 
-  void restablecer() {
-    final conSesion = sesion; // restablecer datos no cierra la sesión
+  /// Reemplaza los datos por los de EJEMPLO (para mostrar la app).
+  /// Conserva la sesión y los ajustes del negocio.
+  void cargarEjemplos() {
+    final conSesion = sesion;
+    final miConfig = config;
     _sembrar();
     sesion = conSesion;
+    config = miConfig;
+    _asegurarCodigos();
+    _cambio();
+  }
+
+  /// Borra todos los datos (clientes, catálogo, cotizaciones y trabajos).
+  /// Conserva la sesión y los ajustes del negocio.
+  void borrarTodo() {
+    _vaciar();
     _cambio();
   }
 

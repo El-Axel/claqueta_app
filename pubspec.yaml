@@ -3,7 +3,7 @@ description: Claqueta - cotiza, agenda y cobra tus producciones audiovisuales.
 publish_to: 'none'
 # versión visible + número de compilación. Sube el número (+2, +3...) en cada
 # APK nueva: así Android la instala ENCIMA de la anterior sin borrar datos.
-version: 1.0.0+2
+version: 1.0.1+3
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

@@ -37,7 +37,7 @@ class PantallaAjustes extends StatelessWidget {
       builder: (context, _) {
         final cfg = tienda.config;
         final g = servicioGoogle;
-        final nombre = g.conectado && g.nombre.isNotEmpty ? g.nombre : 'Alexander Pino Caro';
+        final nombre = g.conectado && g.nombre.isNotEmpty ? g.nombre : 'Tu cuenta';
         return Lienzo(
           appBar: barra('Ajustes'),
           body: ListView(
@@ -356,19 +356,39 @@ class PantallaAjustes extends StatelessWidget {
               BotonClaqueta('Restaurar desde una copia', () => _restaurar(context),
                   tipo: 'secundario', icono: Icons.download_outlined),
               const TituloSeccion('Datos y sesión'),
-              BotonClaqueta('Restablecer datos de ejemplo', () async {
+              // Datos de ejemplo: para mostrar la app (por ejemplo en la
+              // sustentación) sin tener que inventar clientes a mano.
+              BotonClaqueta('Cargar datos de ejemplo', () async {
                 final ok = await confirmar(
                   context,
-                  titulo: '¿Restablecer datos?',
-                  mensaje: 'Se reemplaza todo por los datos de ejemplo. Exporta una copia antes si la necesitas.',
-                  boton: 'Restablecer',
+                  titulo: '¿Cargar datos de ejemplo?',
+                  mensaje: 'Tus clientes, catálogo, cotizaciones y trabajos se REEMPLAZAN por datos '
+                      'de ejemplo${servicioNube.conectada ? ' (también en la nube)' : ''}. '
+                      'Exporta una copia antes si la necesitas.',
+                  boton: 'Cargar ejemplos',
                   peligro: true,
                 );
                 if (ok && context.mounted) {
-                  tienda.restablecer();
-                  mostrarAviso(context, 'Datos de ejemplo restablecidos');
+                  tienda.cargarEjemplos();
+                  mostrarAviso(context, 'Datos de ejemplo cargados');
                 }
-              }, tipo: 'secundario', icono: Icons.restart_alt),
+              }, tipo: 'secundario', icono: Icons.auto_awesome_outlined),
+              const SizedBox(height: 10),
+              BotonClaqueta('Borrar todos mis datos', () async {
+                final ok = await confirmar(
+                  context,
+                  titulo: '¿Borrar todos tus datos?',
+                  mensaje: 'Se borran clientes, catálogo, cotizaciones y trabajos'
+                      '${servicioNube.conectada ? ', también en la nube' : ''}. '
+                      'Tus ajustes del negocio se conservan. No se puede deshacer.',
+                  boton: 'Borrar todo',
+                  peligro: true,
+                );
+                if (ok && context.mounted) {
+                  tienda.borrarTodo();
+                  mostrarAviso(context, 'Listo: la app quedó en blanco');
+                }
+              }, tipo: 'peligro', icono: Icons.delete_sweep_outlined),
               const SizedBox(height: 10),
               BotonClaqueta('Cerrar sesión', () async {
                 final ok = await confirmar(

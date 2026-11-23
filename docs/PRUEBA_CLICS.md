@@ -1,6 +1,6 @@
 # Prueba clic por clic — Claqueta
 
-Generado por `test/recorrido_clics_test.dart` el 2026-11-22 00:25.
+Generado por `test/recorrido_clics_test.dart` el 2026-11-22 09:14.
 
 Cada fila es un toque hecho por la prueba automática, empezando siempre desde los datos de ejemplo. «⚠ sin cambio visible» significa que el toque no cambió de pantalla ni de contenido: hay que revisarlo a mano (puede ser un campo de texto o un botón que no hace nada).
 
@@ -22,10 +22,10 @@ Cada fila es un toque hecho por la prueba automática, empezando siempre desde l
 | Formulario de paquete | 12 | 0 | 0 |
 | Agendar trabajo | 12 | 0 | 0 |
 | Detalle de trabajo | 5 | 0 | 3 |
-| Detalle de cliente | 8 | 0 | 2 |
+| Detalle de cliente | 10 | 0 | 4 |
 | Formulario de cliente | 6 | 0 | 0 |
-| Ajustes | 19 | 0 | 2 |
-| **Total** | **182** | **0** | **20** |
+| Ajustes | 20 | 0 | 2 |
+| **Total** | **185** | **0** | **22** |
 
 ## Desbordes a 390 × 844 (fuente de prueba: confirmar en emulador)
 
@@ -43,7 +43,7 @@ Ninguno.
 
 | # | Elemento | Resultado |
 |---|---|---|
-| 1 | A · Alexander Pino Caro · alexpinocaro@gmail.com | cambia en la misma pantalla |
+| 1 | C · Cuenta de demostración · demo@claqueta.app | cambia en la misma pantalla |
 | 2 | U · Usar otra cuenta · Disponible con Google configurado | → Conectar con Google + aviso (snackbar) |
 
 ### Inicio (23 elementos tocables)
@@ -252,18 +252,20 @@ Ninguno.
 | 4 | Abrir en Calendar | ⚠ sin cambio visible |
 | 5 | Cancelar trabajo | → Detalle de trabajo + diálogo |
 
-### Detalle de cliente (8 elementos tocables)
+### Detalle de cliente (10 elementos tocables)
 
 | # | Elemento | Resultado |
 |---|---|---|
 | 1 | Editar | → Formulario de cliente |
 | 2 | WhatsApp | ⚠ sin cambio visible |
 | 3 | Correo | ⚠ sin cambio visible |
-| 4 | C · COT-0042 · Café Origen S.A.S. · Comercial 30" | → Detalle de cotización |
-| 5 | C · COT-0037 · Café Origen S.A.S. · Fotografía de producto | → Detalle de cotización |
-| 6 | F · Fotografía de producto · Vie 9 oct · 10:00 am · Jardín Botánico | → Detalle de trabajo |
-| 7 | Nueva cotización | → Nueva cotización |
-| 8 | Eliminar cliente | → Detalle de cliente + diálogo |
+| 4 | Copiar | ⚠ sin cambio visible |
+| 5 | Enviar por WhatsApp | ⚠ sin cambio visible |
+| 6 | C · COT-0042 · Café Origen S.A.S. · Comercial 30" | → Detalle de cotización |
+| 7 | C · COT-0037 · Café Origen S.A.S. · Fotografía de producto | → Detalle de cotización |
+| 8 | F · Fotografía de producto · Vie 9 oct · 10:00 am · Jardín Botánico | → Detalle de trabajo |
+| 9 | Nueva cotización | → Nueva cotización |
+| 10 | Eliminar cliente | → Detalle de cliente + diálogo |
 
 ### Formulario de cliente (6 elementos tocables)
 
@@ -276,7 +278,7 @@ Ninguno.
 | 5 | Guardar cliente | → Formulario de cliente + aviso (snackbar) |
 | 6 | Cancelar | → ? |
 
-### Ajustes (19 elementos tocables)
+### Ajustes (20 elementos tocables)
 
 | # | Elemento | Resultado |
 |---|---|---|
@@ -286,9 +288,9 @@ Ninguno.
 | 4 | [interruptor] | cambia en la misma pantalla |
 | 5 | Ciudad · Toda Colombia | → Ajustes + hoja inferior |
 | 6 | Usar mi ubicación aproximada | ⚠ sin cambio visible |
-| 7 | Nombre en cotizaciones · Alexander Pino - Realizador audiovisual | → Ajustes + hoja inferior |
+| 7 | Nombre en cotizaciones · Mi negocio | → Ajustes + hoja inferior |
 | 8 | Mi WhatsApp · Sin definir | → Ajustes + hoja inferior |
-| 9 | Mi sitio web · alexpino.netlify.app | → Ajustes + hoja inferior |
+| 9 | Mi sitio web · Sin definir | → Ajustes + hoja inferior |
 | 10 | [interruptor] | cambia en la misma pantalla |
 | 11 | icono 0xe516 | cambia en la misma pantalla |
 | 12 | icono 0xe047 | cambia en la misma pantalla |
@@ -297,5 +299,6 @@ Ninguno.
 | 15 | Catálogo y paquetes | → Catálogo |
 | 16 | Exportar copia (copiar al portapapeles) | ⚠ sin cambio visible |
 | 17 | Restaurar desde una copia | → Ajustes + hoja inferior |
-| 18 | Restablecer datos de ejemplo | → Ajustes + diálogo |
-| 19 | Cerrar sesión | → Ajustes + diálogo |
+| 18 | Cargar datos de ejemplo | → Ajustes + diálogo |
+| 19 | Borrar todos mis datos | → Ajustes + diálogo |
+| 20 | Cerrar sesión | → Ajustes + diálogo |

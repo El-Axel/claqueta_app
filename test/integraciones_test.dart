@@ -7,6 +7,8 @@ import 'package:claqueta/servicios/correo_html.dart';
 import 'package:claqueta/servicios/google_api.dart';
 import 'package:claqueta/servicios/lugares_api.dart';
 import 'package:claqueta/servicios/nube.dart';
+import 'package:claqueta/tienda.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:claqueta/util.dart';
 
 // Pruebas de las integraciones que no necesitan internet.
@@ -71,6 +73,23 @@ void main() {
     expect((cot['datos'] as Map)['proyecto'], 'Video');
     expect(f['clientes']!.single['nombre'], 'Ana');
     expect(f['config']!.single['user_id'], 'uid-123');
+  });
+
+  test('Un usuario nuevo empieza vacío; los ejemplos se cargan a mano', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    final t = Tienda();
+    await t.cargar();
+    expect(t.estaVacia, isTrue);
+    expect(t.config.negocio, 'Mi negocio');
+    expect(t.config.web, isEmpty);
+    t.config.negocio = 'Estudio X';
+    t.cargarEjemplos();
+    expect(t.clientes, isNotEmpty);
+    expect(t.config.negocio, 'Estudio X'); // los ajustes del negocio se conservan
+    expect(t.clientes.every((c) => c.codigo.startsWith('CLQ-')), isTrue);
+    t.borrarTodo();
+    expect(t.estaVacia, isTrue);
   });
 
   test('Solo se piden los permisos mínimos de Google', () {
