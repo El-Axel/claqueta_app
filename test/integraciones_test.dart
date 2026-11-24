@@ -3,10 +3,12 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:claqueta/modelos.dart';
+import 'package:claqueta/servicios/captcha.dart';
 import 'package:claqueta/servicios/correo_html.dart';
 import 'package:claqueta/servicios/google_api.dart';
 import 'package:claqueta/servicios/lugares_api.dart';
 import 'package:claqueta/servicios/nube.dart';
+import 'package:claqueta/servicios/portal_cliente.dart' show mensajeCanje;
 import 'package:claqueta/tienda.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
@@ -107,6 +109,32 @@ void main() {
     expect(t.estaVacia, isTrue);
     expect(subidas, antes); // no programa subida: no borra la nube
     expect(t.dueno, 'cuenta-A');
+  });
+
+  test('El límite de intentos del código se explica al cliente', () {
+    expect(mensajeCanje({'realizador_id': 'x', 'cliente_id': 1}), isNull);
+    expect(mensajeCanje({'error': 'no_valido', 'restantes': 4}), contains('no existe'));
+    expect(mensajeCanje({'error': 'no_valido', 'restantes': 1}), contains('1 intento'));
+    expect(mensajeCanje({'error': 'no_valido', 'restantes': 0}), contains('espera 15 minutos'));
+    expect(mensajeCanje({'error': 'bloqueado', 'espera_min': 15}), contains('15 minutos'));
+  });
+
+  test('Cambiar el código da uno nuevo, distinto y con el formato correcto', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    final t = Tienda();
+    await t.cargar();
+    t.cargarEjemplos();
+    final c = t.clientes.first;
+    final viejo = c.codigo;
+    t.cambiarCodigo(c.id);
+    expect(c.codigo, isNot(viejo));
+    expect(RegExp(r'^CLQ-[A-Z2-9]{6}$').hasMatch(c.codigo), isTrue);
+  });
+
+  test('Sin clave de Turnstile el CAPTCHA queda apagado y no estorba', () async {
+    expect(captchaActivo, isFalse);
+    expect(await tokenCaptcha(), isNull);
   });
 
   test('Los errores de la cuenta se explican en español', () {

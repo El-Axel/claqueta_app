@@ -3,7 +3,7 @@ description: Claqueta - cotiza, agenda y cobra tus producciones audiovisuales.
 publish_to: 'none'
 # versión visible + número de compilación. Sube el número (+2, +3...) en cada
 # APK nueva: así Android la instala ENCIMA de la anterior sin borrar datos.
-version: 1.0.2+4
+version: 1.0.3+5
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -22,6 +22,14 @@ dependencies:
   google_sign_in: ^7.2.0
   geolocator: ^14.1.2
   supabase_flutter: ^2.18.3
+  cloudflare_turnstile: ^3.8.1
+
+# El navegador interno que usa Turnstile (CAPTCHA) en Android: la versión
+# estable 1.1.3 no compila con el Android Gradle Plugin actual (usa
+# proguard-android.txt). La familia 6.2.0-beta.3 ya lo corrige; se fuerza
+# completa para que todas sus piezas (Android, iOS, web…) coincidan.
+dependency_overrides:
+  flutter_inappwebview: 6.2.0-beta.3
 
 dev_dependencies:
   flutter_test:

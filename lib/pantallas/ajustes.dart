@@ -508,7 +508,7 @@ class PantallaAjustes extends StatelessWidget {
                 }
               }, tipo: 'peligro', icono: Icons.logout),
               const SizedBox(height: 20),
-              Center(child: Text('Claqueta 1.0.2', style: estiloSuave())),
+              Center(child: Text('Claqueta 1.0.3', style: estiloSuave())),
             ],
           ),
         );

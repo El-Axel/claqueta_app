@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../modelos.dart';
 import '../tienda.dart';
+import 'captcha.dart';
 import 'google_api.dart';
 
 // ---------------------------------------------------------------
@@ -146,6 +147,13 @@ class ServicioNube extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Saca a quienes entraron como este cliente (con el código anterior).
+  /// La seguridad por fila solo deja borrar accesos de MIS clientes.
+  Future<void> revocarAccesos(int clienteId) async {
+    if (!conectada) throw Exception('Conecta tu cuenta para cambiar el código en la nube');
+    await _db.from('accesos_cliente').delete().eq('cliente_id', clienteId).eq('realizador_id', uid);
+  }
+
   /// El realizador ya vio el pedido de cambios.
   Future<void> marcarCambioVisto(int id) async {
     await _db.from('respuestas').update({'procesada': true}).eq('id', id);
@@ -179,6 +187,7 @@ class ServicioNube extends ChangeNotifier {
       final r = await _db.auth.signUp(
         email: correo.trim(),
         password: clave,
+        captchaToken: await tokenCaptcha(),
         data: nombre.trim().isEmpty ? null : {'nombre': nombre.trim()},
       );
       if (r.session == null) {
@@ -196,7 +205,8 @@ class ServicioNube extends ChangeNotifier {
   Future<void> entrarConCorreo(String correo, String clave) async {
     await _antesDeEntrar();
     try {
-      await _db.auth.signInWithPassword(email: correo.trim(), password: clave);
+      await _db.auth.signInWithPassword(
+          email: correo.trim(), password: clave, captchaToken: await tokenCaptcha());
       _alEntrar();
     } on AuthException catch (e) {
       throw Exception(mensajeAuth(e));
@@ -243,7 +253,8 @@ class ServicioNube extends ChangeNotifier {
     final idToken = servicioGoogle.cuenta?.authentication.idToken;
     if (idToken == null) throw Exception('Google no entregó el token de inicio de sesión');
     try {
-      await _db.auth.signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
+      await _db.auth.signInWithIdToken(
+          provider: OAuthProvider.google, idToken: idToken, captchaToken: await tokenCaptcha());
       _alEntrar();
     } on AuthException catch (e) {
       _cambiar(EstadoNube.error, e.message);
@@ -439,5 +450,8 @@ String mensajeAuth(AuthException e) {
     return 'Demasiados intentos seguidos. Espera unos minutos';
   }
   if (c == 'signup_disabled') return 'Por ahora no se pueden crear cuentas nuevas';
+  if (c == 'captcha_failed' || m.contains('captcha')) {
+    return 'No pudimos verificar que eres una persona. Intenta de nuevo';
+  }
   return e.message;
 }
