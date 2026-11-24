@@ -99,6 +99,7 @@ class PortalCliente extends ChangeNotifier {
       final r = await servicioNube.db.rpc('canjear_codigo', params: {'p_codigo': codigo.trim()});
       m = Map<String, dynamic>.from(r as Map);
     } catch (e) {
+      debugPrint('canjear_codigo falló: $e');
       final txt = e.toString();
       throw Exception(txt.contains('no válido')
           ? 'Ese código no existe. Revísalo con tu realizador.'
@@ -261,6 +262,9 @@ String? mensajeCanje(Map<String, dynamic> r) {
       return null;
     case 'no_valido':
       final quedan = r['restantes'];
+      if (quedan is int && quedan <= 0) {
+        return 'Ese código no existe. Por seguridad, espera 15 minutos antes de volver a intentarlo.';
+      }
       return quedan is int && quedan <= 2
           ? 'Ese código no existe. Te quedan $quedan ${quedan == 1 ? 'intento' : 'intentos'} antes de una pausa.'
           : 'Ese código no existe. Revísalo con tu realizador.';

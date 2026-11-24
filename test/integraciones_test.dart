@@ -115,6 +115,7 @@ void main() {
     expect(mensajeCanje({'realizador_id': 'x', 'cliente_id': 1}), isNull);
     expect(mensajeCanje({'error': 'no_valido', 'restantes': 4}), contains('no existe'));
     expect(mensajeCanje({'error': 'no_valido', 'restantes': 1}), contains('1 intento'));
+    expect(mensajeCanje({'error': 'no_valido', 'restantes': 0}), contains('espera 15 minutos'));
     expect(mensajeCanje({'error': 'bloqueado', 'espera_min': 15}), contains('15 minutos'));
   });
 
