@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'captcha.dart';
 import '../modelos.dart';
 import 'nube.dart';
 
@@ -83,25 +84,34 @@ class PortalCliente extends ChangeNotifier {
     final auth = servicioNube.db.auth;
     if (auth.currentUser == null || !auth.currentUser!.isAnonymous) {
       if (auth.currentUser != null) await auth.signOut();
+      // CAPTCHA (si está activado): solo una persona consigue el token.
+      final token = await tokenCaptcha();
       try {
-        await auth.signInAnonymously();
+        await auth.signInAnonymously(captchaToken: token);
       } catch (e) {
-        throw Exception('No se pudo iniciar el modo cliente (¿acceso anónimo activado en Supabase?)');
+        throw Exception(e.toString().toLowerCase().contains('captcha')
+            ? 'No pudimos verificar que eres una persona. Intenta de nuevo.'
+            : 'No se pudo iniciar el modo cliente. Revisa tu conexión.');
       }
     }
+    Map<String, dynamic> m;
     try {
       final r = await servicioNube.db.rpc('canjear_codigo', params: {'p_codigo': codigo.trim()});
-      final m = Map<String, dynamic>.from(r as Map);
-      realizadorId = m['realizador_id'] as String;
-      clienteId = m['cliente_id'] as int;
-      nombreCliente = (m['cliente'] ?? '') as String;
-      negocio = (m['negocio'] ?? '') as String;
+      m = Map<String, dynamic>.from(r as Map);
     } catch (e) {
       final txt = e.toString();
       throw Exception(txt.contains('no válido')
           ? 'Ese código no existe. Revísalo con tu realizador.'
           : 'No se pudo validar el código. Revisa tu conexión.');
     }
+    // Límite de intentos (supabase/seguridad_portal.sql): la base de datos
+    // responde con un error en lugar de los datos.
+    final error = mensajeCanje(m);
+    if (error != null) throw Exception(error);
+    realizadorId = m['realizador_id'] as String;
+    clienteId = m['cliente_id'] as int;
+    nombreCliente = (m['cliente'] ?? '') as String;
+    negocio = (m['negocio'] ?? '') as String;
     final p = await SharedPreferences.getInstance();
     await p.setString(_claveRol, 'cliente');
     await cargar();
@@ -240,5 +250,24 @@ class PortalCliente extends ChangeNotifier {
     respuestas = [];
     novedades = [];
     notifyListeners();
+  }
+}
+
+/// Traduce la respuesta de canjear_codigo() cuando trae un error.
+/// Devuelve null si el canje salió bien.
+String? mensajeCanje(Map<String, dynamic> r) {
+  switch (r['error']) {
+    case null:
+      return null;
+    case 'no_valido':
+      final quedan = r['restantes'];
+      return quedan is int && quedan <= 2
+          ? 'Ese código no existe. Te quedan $quedan ${quedan == 1 ? 'intento' : 'intentos'} antes de una pausa.'
+          : 'Ese código no existe. Revísalo con tu realizador.';
+    case 'bloqueado':
+      final min = r['espera_min'] ?? 15;
+      return 'Demasiados intentos fallidos. Por seguridad, espera $min minutos e intenta de nuevo.';
+    default:
+      return 'No se pudo validar el código.';
   }
 }

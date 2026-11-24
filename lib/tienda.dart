@@ -81,6 +81,18 @@ class Tienda extends ChangeNotifier {
   void avisar(int clienteId, String tipo, String texto) =>
       alNovedad?.call(clienteId, tipo, texto);
 
+  /// Le da un código NUEVO al cliente (por ejemplo, si el anterior se
+  /// filtró). El código viejo deja de servir en cuanto se sube a la nube.
+  void cambiarCodigo(int clienteId) {
+    final c = cliente(clienteId);
+    final viejo = c.codigo;
+    do {
+      c.codigo = '';
+      _asegurarCodigos();
+    } while (c.codigo == viejo);
+    _cambio();
+  }
+
   /// Genera el código de invitación de cada cliente que aún no lo tenga.
   /// Formato CLQ-XXXXXX sin letras que se confunden (0/O, 1/I/L).
   bool _asegurarCodigos() {

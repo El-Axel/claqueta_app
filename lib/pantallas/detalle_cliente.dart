@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../compartir.dart';
 import '../modelos.dart';
+import '../servicios/nube.dart';
 import '../tema.dart';
 import '../tienda.dart';
 import '../util.dart';
@@ -140,6 +141,11 @@ class DetalleCliente extends StatelessWidget {
                             icon: const Icon(Icons.chat_outlined, size: 18),
                             label: const Text('Enviar por WhatsApp'),
                           ),
+                          TextButton.icon(
+                            onPressed: () => _cambiarCodigo(context, c),
+                            icon: const Icon(Icons.lock_reset, size: 18),
+                            label: const Text('Cambiar código'),
+                          ),
                         ],
                       ),
                     ],
@@ -179,5 +185,31 @@ class DetalleCliente extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// Cambia el código del cliente y saca a quien hubiera entrado con el
+/// anterior (útil si el código se filtró o se envió a otra persona).
+Future<void> _cambiarCodigo(BuildContext context, Cliente c) async {
+  final ok = await confirmar(
+    context,
+    titulo: '¿Cambiar el código de ${c.nombre}?',
+    mensaje: 'El código actual deja de servir y quien haya entrado con él sale de su espacio. '
+        'Luego envíale el código nuevo.',
+    boton: 'Cambiar código',
+    peligro: true,
+  );
+  if (!ok || !context.mounted) return;
+  tienda.cambiarCodigo(c.id);
+  try {
+    if (servicioNube.conectada) {
+      await servicioNube.subir(); // el código viejo deja de existir en la nube
+      await servicioNube.revocarAccesos(c.id);
+    }
+    if (context.mounted) mostrarAviso(context, 'Código nuevo: ${tienda.cliente(c.id).codigo}');
+  } catch (e) {
+    if (context.mounted) {
+      mostrarAviso(context, 'Código cambiado en el teléfono; la nube se actualizará al conectar');
+    }
   }
 }

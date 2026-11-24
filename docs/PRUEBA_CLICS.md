@@ -1,6 +1,6 @@
 # Prueba clic por clic — Claqueta
 
-Generado por `test/recorrido_clics_test.dart` el 2026-11-23 17:12.
+Generado por `test/recorrido_clics_test.dart` el 2026-11-23 19:14.
 
 Cada fila es un toque hecho por la prueba automática, empezando siempre desde los datos de ejemplo. «⚠ sin cambio visible» significa que el toque no cambió de pantalla ni de contenido: hay que revisarlo a mano (puede ser un campo de texto o un botón que no hace nada).
 
@@ -22,10 +22,10 @@ Cada fila es un toque hecho por la prueba automática, empezando siempre desde l
 | Formulario de paquete | 12 | 0 | 0 |
 | Agendar trabajo | 9 | 0 | 0 |
 | Detalle de trabajo | 5 | 0 | 3 |
-| Detalle de cliente | 10 | 0 | 4 |
+| Detalle de cliente | 11 | 0 | 4 |
 | Formulario de cliente | 6 | 0 | 0 |
 | Ajustes | 20 | 0 | 2 |
-| **Total** | **182** | **0** | **22** |
+| **Total** | **183** | **0** | **22** |
 
 ## Desbordes a 390 × 844 (fuente de prueba: confirmar en emulador)
 
@@ -249,7 +249,7 @@ Ninguno.
 | 4 | Abrir en Calendar | ⚠ sin cambio visible |
 | 5 | Cancelar trabajo | → Detalle de trabajo + diálogo |
 
-### Detalle de cliente (10 elementos tocables)
+### Detalle de cliente (11 elementos tocables)
 
 | # | Elemento | Resultado |
 |---|---|---|
@@ -258,11 +258,12 @@ Ninguno.
 | 3 | Correo | ⚠ sin cambio visible |
 | 4 | Copiar | ⚠ sin cambio visible |
 | 5 | Enviar por WhatsApp | ⚠ sin cambio visible |
-| 6 | C · COT-0042 · Café Origen S.A.S. · Comercial 30" | → Detalle de cotización |
-| 7 | C · COT-0037 · Café Origen S.A.S. · Fotografía de producto | → Detalle de cotización |
-| 8 | F · Fotografía de producto · Sáb 10 oct · 10:00 am · Jardín Botánico | → Detalle de trabajo |
-| 9 | Nueva cotización | → Nueva cotización |
-| 10 | Eliminar cliente | → Detalle de cliente + diálogo |
+| 6 | Cambiar código | → Detalle de cliente + diálogo |
+| 7 | C · COT-0042 · Café Origen S.A.S. · Comercial 30" | → Detalle de cotización |
+| 8 | C · COT-0037 · Café Origen S.A.S. · Fotografía de producto | → Detalle de cotización |
+| 9 | F · Fotografía de producto · Sáb 10 oct · 10:00 am · Jardín Botánico | → Detalle de trabajo |
+| 10 | Nueva cotización | → Nueva cotización |
+| 11 | Eliminar cliente | → Detalle de cliente + diálogo |
 
 ### Formulario de cliente (6 elementos tocables)
 

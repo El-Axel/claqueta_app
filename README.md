@@ -74,6 +74,7 @@ APK para entregar: `flutter build apk --dart-define-from-file=dart_defines.json`
 | [DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Colores, tipografías, componentes, correo HTML y portal |
 | [SUSTENTACION.md](docs/SUSTENTACION.md) | Guion de demostración, preguntas del jurado y checklist del día |
 | [PRUEBAS.md](docs/PRUEBAS.md) | Pruebas automáticas y pruebas manuales hechas / pendientes |
+| [SEGURIDAD.md](docs/SEGURIDAD.md) | CAPTCHA (Turnstile), límite de intentos del código y cómo activarlos |
 | [CUENTAS.md](docs/CUENTAS.md) | Cuentas con correo y contraseña: dónde se guardan y qué activar en Supabase |
 | [GOOGLE_CLOUD_SETUP.md](docs/GOOGLE_CLOUD_SETUP.md) | Configurar Gmail y Calendar en Google Cloud (sin facturación) |
 | [SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) | Crear la base de datos, el login y el portal del cliente |
