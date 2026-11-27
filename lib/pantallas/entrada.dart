@@ -1,22 +1,28 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../tema.dart';
 import '../selectores.dart';
 import '../servicios/google_api.dart';
 import '../servicios/nube.dart';
-import 'cliente/codigo_cliente.dart';
+import '../servicios/portal_cliente.dart';
+import 'cliente/piezas_cliente.dart';
+import 'cliente/principal_cliente.dart';
 import 'cuenta.dart';
 import '../tienda.dart';
 import '../widgets.dart';
 import 'principal.dart';
 import '../estilo.dart';
 
-// Pantalla de entrada: logo, tagline y botones por rol.
-// - Realizador (Android): crea su cuenta o entra con correo y contraseña.
-//   Quien empezó con Google puede seguir entrando con Google.
-// - Cliente: entra con el código de invitación.
+// ---------------------------------------------------------------
+// ENTRADA: una sola pantalla de acceso, con selector de rol.
+// - Realizador: correo y contraseña a la vista, "Continuar con Google"
+//   y enlace para crear cuenta.
+// - Cliente: código de invitación.
+// - En la web el realizador ve dónde descargar la app de Android.
 // - Sin nube configurada: MODO DEMOSTRACIÓN.
+// ---------------------------------------------------------------
 class PantallaEntrada extends StatefulWidget {
   const PantallaEntrada({super.key});
 
@@ -25,131 +31,407 @@ class PantallaEntrada extends StatefulWidget {
 }
 
 class _PantallaEntradaState extends State<PantallaEntrada> {
-  bool cargando = false;
+  // En la web la app es el espacio del cliente: abre en "Cliente".
+  late bool _esCliente = kIsWeb;
+  bool _cargando = false;
+  bool _verClave = false;
+  final _correo = TextEditingController();
+  final _clave = TextEditingController();
+  final _codigo = TextEditingController();
 
-  Future<void> continuar() async {
-    if (!servicioGoogle.real) {
-      ir(context, const PantallaGoogle());
-      return;
-    }
-    setState(() => cargando = true);
+  @override
+  void dispose() {
+    _correo.dispose();
+    _clave.dispose();
+    _codigo.dispose();
+    super.dispose();
+  }
+
+  void _irAPrincipal() {
+    tienda.iniciarSesion();
+    Navigator.pushAndRemoveUntil(
+        context, MaterialPageRoute(builder: (_) => const PantallaPrincipal()), (r) => false);
+  }
+
+  /// Ejecuta una acción de acceso mostrando "cargando" y los errores.
+  Future<void> _intentar(Future<void> Function() accion) async {
+    if (_cargando) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _cargando = true);
     try {
-      await servicioGoogle.entrar();
-      if (!mounted) return;
-      // Nube: entra con Google y recupera los datos si ya existían.
-      await conectarNube(context);
-      if (!mounted) return;
-      tienda.iniciarSesion();
-      Navigator.pushAndRemoveUntil(context,
-          MaterialPageRoute(builder: (_) => const PantallaPrincipal()), (r) => false);
+      await accion();
     } catch (e) {
       if (mounted) mostrarAviso(context, e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => cargando = false);
+      if (mounted) setState(() => _cargando = false);
     }
   }
 
+  // ---------- Realizador ----------
+  Future<void> _entrarConCorreo() => _intentar(() async {
+        final correo = _correo.text.trim();
+        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(correo)) {
+          throw Exception('Escribe un correo válido');
+        }
+        if (_clave.text.isEmpty) throw Exception('Escribe tu contraseña');
+        await servicioNube.entrarConCorreo(correo, _clave.text);
+        if (!mounted) return;
+        await sincronizarCuenta(context);
+        if (mounted) _irAPrincipal();
+      });
+
+  Future<void> _entrarConGoogle() => _intentar(() async {
+        if (!servicioGoogle.real) {
+          ir(context, const PantallaGoogle());
+          return;
+        }
+        await servicioGoogle.entrar();
+        if (!mounted) return;
+        await conectarNube(context);
+        if (mounted) _irAPrincipal();
+      });
+
+  void _olvideClave() => hojaInferior<void>(
+        context,
+        (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('¿Olvidaste tu contraseña?', style: estiloDisplay(tamano: 16)),
+            const SizedBox(height: 8),
+            Text(
+              'Si tu cuenta es de Google, entra con "Continuar con Google" y crea una '
+              'contraseña nueva en Ajustes → Nube → Contraseña.\n\n'
+              'Si la creaste con correo, pide al administrador de Claqueta que la '
+              'restablezca. Pronto llegará un enlace de recuperación a tu correo.',
+              style: estiloSuave(tamano: 14),
+            ),
+            const SizedBox(height: 16),
+            BotonClaqueta('Entendido', () => Navigator.pop(ctx)),
+          ],
+        ),
+      );
+
+  // ---------- Cliente ----------
+  Future<void> _entrarComoCliente() => _intentar(() async {
+        final codigo = _codigo.text.trim();
+        if (codigo.isEmpty) throw Exception('Escribe tu código de invitación');
+        await portal.entrarConCodigo(codigo);
+        if (!mounted) return;
+        pestanaCliente.value = 0;
+        Navigator.pushAndRemoveUntil(
+            context, MaterialPageRoute(builder: (_) => const PrincipalCliente()), (r) => false);
+      });
+
   @override
   Widget build(BuildContext context) {
+    final conNube = servicioNube.configurada;
     return Lienzo(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Spacer(),
-              // Tarjeta suave del Home en lugar del degradado teal -> arena:
-              // el logo es el único bloque de acento (arena) de la pantalla.
-              TarjetaSuave(
-                relleno: const EdgeInsets.all(26),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 68,
-                      height: 68,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Paleta.arena,
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: Text('C', style: estiloDisplay(tamano: 32, color: Paleta.suelo)),
-                    ),
-                    const SizedBox(height: 34),
-                    Text('Claqueta', style: estiloDisplay(tamano: 34)),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Cotiza, agenda y cobra tus producciones audiovisuales.',
-                      style: TextStyle(
-                          color: Paleta.tinta.withAlpha(170), fontSize: 15, height: 1.35),
-                    ),
-                  ],
+        child: Center(
+          child: ConstrainedBox(
+            // En pantallas anchas (web) el formulario no se estira.
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+              children: [
+                const _Marca(),
+                const SizedBox(height: 48),
+                _SelectorRol(
+                  esCliente: _esCliente,
+                  alCambiar: _cargando ? null : (v) => setState(() => _esCliente = v),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  PildoraOscura('Maps', icono: Icons.place_outlined, sobreHero: false),
-                  PildoraOscura('Clima', icono: Icons.wb_sunny_outlined, sobreHero: false),
-                  PildoraOscura('Calendar', icono: Icons.event_outlined, sobreHero: false),
-                  PildoraOscura('Gmail', icono: Icons.mail_outline, sobreHero: false),
-                ],
-              ),
-              const Spacer(),
-              // Dos roles: el realizador entra con Google; el cliente, con
-              // el código de invitación que le envió su realizador.
-              // En la WEB la app es el espacio del cliente: el realizador
-              // trabaja en la app de Android (Gmail/Calendar reales).
-              if (kIsWeb) ...[
-                BotonClaqueta('Soy cliente · tengo un código',
-                    () => ir(context, const PantallaCodigoCliente()),
-                    icono: Icons.key_outlined),
-                const SizedBox(height: 10),
-                BotonClaqueta('Soy realizador · descargar la app',
-                    () => _realizadorEnWeb(context),
-                    tipo: 'secundario', icono: Icons.android),
-              ] else if (servicioNube.configurada) ...[
-                // Realizador: primero su CUENTA (correo y contraseña);
-                // Google se conecta después, en Ajustes.
-                BotonClaqueta('Soy realizador · crear cuenta',
-                    cargando ? null : () => ir(context, const PantallaCuenta(crear: true)),
-                    icono: Icons.person_add_alt_1_outlined),
-                const SizedBox(height: 10),
-                BotonClaqueta('Ya tengo cuenta',
-                    cargando ? null : () => ir(context, const PantallaCuenta(crear: false)),
-                    tipo: 'secundario', icono: Icons.login),
-                const SizedBox(height: 10),
-                BotonClaqueta('Soy cliente · tengo un código',
-                    cargando ? null : () => ir(context, const PantallaCodigoCliente()),
-                    tipo: 'secundario', icono: Icons.key_outlined),
-                if (servicioGoogle.real)
-                  Center(
-                    child: TextButton(
-                      onPressed: cargando ? null : continuar,
-                      child: Text(cargando ? 'Conectando…' : 'Empecé con Google · entrar con Google',
-                          style: estiloSuave(tamano: 13)),
-                    ),
-                  ),
-              ] else ...[
-                BotonClaqueta('Entrar (demostración)', () => ir(context, const PantallaGoogle()),
-                    icono: Icons.login),
+                const SizedBox(height: 32),
+                if (!conNube)
+                  ..._demostracion()
+                else if (_esCliente)
+                  ..._formCliente()
+                else if (kIsWeb)
+                  ..._realizadorWeb()
+                else
+                  ..._formRealizador(),
               ],
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                    kIsWeb
-                        ? 'Espacio del cliente · el realizador usa la app de Android'
-                        : servicioNube.configurada
-                            ? 'Tus datos se guardan en el teléfono y en tu cuenta en la nube'
-                            : 'Modo demostración: la nube no está configurada en esta versión',
-                    textAlign: TextAlign.center,
-                    style: estiloSuave()),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _formRealizador() => [
+        Text('Bienvenido de nuevo', style: estiloDisplay(tamano: 28)),
+        const SizedBox(height: 8),
+        Text('Entra para cotizar, agendar y cobrar tus producciones.',
+            style: estiloSuave(tamano: 15)),
+        const SizedBox(height: 28),
+        TextField(
+          controller: _correo,
+          enabled: !_cargando,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          enableSuggestions: false,
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.email],
+          decoration: decoracionCampo('Correo', icono: const Icon(Icons.mail_outline)),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _clave,
+          enabled: !_cargando,
+          obscureText: !_verClave,
+          autocorrect: false,
+          enableSuggestions: false,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.password],
+          onSubmitted: (_) => _entrarConCorreo(),
+          decoration: decoracionCampo('Contraseña', icono: const Icon(Icons.lock_outline))
+              .copyWith(
+            suffixIcon: IconButton(
+              tooltip: _verClave ? 'Ocultar contraseña' : 'Ver contraseña',
+              icon: Icon(_verClave ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+              onPressed: () => setState(() => _verClave = !_verClave),
+            ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _cargando ? null : _olvideClave,
+            child: const Text('¿Olvidaste tu contraseña?', style: TextStyle(color: Paleta.arena)),
+          ),
+        ),
+        const SizedBox(height: 4),
+        BotonClaqueta(_cargando ? 'Un momento…' : 'Entrar', _cargando ? null : _entrarConCorreo),
+        if (servicioGoogle.real) ...[
+          const SizedBox(height: 22),
+          const _Separador(),
+          const SizedBox(height: 22),
+          _BotonGoogle(alTocar: _cargando ? null : _entrarConGoogle),
+        ],
+        const SizedBox(height: 28),
+        Center(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text('¿No tienes cuenta?', style: estiloSuave(tamano: 14)),
+              TextButton(
+                onPressed:
+                    _cargando ? null : () => ir(context, const PantallaCuenta(crear: true)),
+                child: const Text('Crear cuenta',
+                    style: TextStyle(color: Paleta.arena, fontWeight: FontWeight.w800)),
               ),
             ],
           ),
+        ),
+      ];
+
+  List<Widget> _formCliente() => [
+        Text('Tu espacio de cliente', style: estiloDisplay(tamano: 28)),
+        const SizedBox(height: 8),
+        Text('Escribe el código de invitación que te envió tu realizador.',
+            style: estiloSuave(tamano: 15)),
+        const SizedBox(height: 28),
+        TextField(
+          controller: _codigo,
+          enabled: !_cargando,
+          textAlign: TextAlign.center,
+          textCapitalization: TextCapitalization.characters,
+          autocorrect: false,
+          enableSuggestions: false,
+          maxLength: 10, // "CLQ-" + 6 caracteres
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 3),
+          inputFormatters: [
+            // Solo letras, números y guion, siempre en mayúsculas.
+            FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9-]')),
+            TextInputFormatter.withFunction(
+                (viejo, nuevo) => nuevo.copyWith(text: nuevo.text.toUpperCase())),
+          ],
+          decoration: decoracionCampo('Código de invitación', ayuda: 'CLQ-XXXXXX')
+              .copyWith(counterText: ''),
+          onSubmitted: (_) => _entrarComoCliente(),
+        ),
+        const SizedBox(height: 18),
+        BotonClaqueta(
+            _cargando ? 'Entrando…' : 'Entrar', _cargando ? null : _entrarComoCliente),
+        const SizedBox(height: 22),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.lock_outline, size: 18, color: Paleta.tinta.withAlpha(150)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Solo verás tus cotizaciones, tus rodajes y los avisos de tu realizador. '
+                'No necesitas crear una cuenta.',
+                style: estiloSuave(tamano: 13),
+              ),
+            ),
+          ],
+        ),
+      ];
+
+  List<Widget> _realizadorWeb() => [
+        Text('Claqueta para realizadores', style: estiloDisplay(tamano: 28)),
+        const SizedBox(height: 8),
+        Text(
+          'Cotizar, agendar, cobrar y enviar por Gmail y Calendar se hace en la app de '
+          'Android. Descárgala y entra con tu cuenta: tus datos te esperan en la nube.',
+          style: estiloSuave(tamano: 15),
+        ),
+        const SizedBox(height: 28),
+        BotonClaqueta('Descargar la app (Android)', () async {
+          var ok = false;
+          try {
+            ok = await launchUrl(Uri.parse(enlaceApk), mode: LaunchMode.externalApplication);
+          } catch (_) {}
+          if (!ok && mounted) mostrarAviso(context, 'No se pudo abrir el enlace de descarga');
+        }, icono: Icons.download_outlined),
+        const SizedBox(height: 14),
+        Text('En iPhone y en el navegador, Claqueta funciona como espacio del cliente.',
+            style: estiloSuave(tamano: 13)),
+      ];
+
+  List<Widget> _demostracion() => [
+        Text('Modo demostración', style: estiloDisplay(tamano: 28)),
+        const SizedBox(height: 8),
+        Text('Esta versión no tiene la nube configurada: entra con datos de ejemplo.',
+            style: estiloSuave(tamano: 15)),
+        const SizedBox(height: 28),
+        BotonClaqueta('Entrar (demostración)', () => ir(context, const PantallaGoogle()),
+            icono: Icons.login),
+      ];
+}
+
+/// Logo pequeño + nombre: la marca arriba, sin ocupar media pantalla.
+class _Marca extends StatelessWidget {
+  const _Marca();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration:
+              BoxDecoration(color: Paleta.arena, borderRadius: BorderRadius.circular(14)),
+          child: Text('C', style: estiloDisplay(tamano: 20, color: Paleta.suelo)),
+        ),
+        const SizedBox(width: 12),
+        Text('Claqueta', style: estiloDisplay(tamano: 20)),
+      ],
+    );
+  }
+}
+
+/// Selector "Realizador | Cliente" en forma de píldora.
+class _SelectorRol extends StatelessWidget {
+  final bool esCliente;
+  final ValueChanged<bool>? alCambiar;
+  const _SelectorRol({required this.esCliente, required this.alCambiar});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget opcion(String texto, IconData icono, bool activa, bool valor) => Expanded(
+          child: Semantics(
+            button: true,
+            selected: activa,
+            child: GestureDetector(
+              onTap: alCambiar == null ? null : () => alCambiar!(valor),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: activa ? Paleta.arena : Colors.transparent,
+                  borderRadius: BorderRadius.circular(23),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icono, size: 18, color: activa ? Paleta.suelo : Paleta.tinta.withAlpha(170)),
+                    const SizedBox(width: 8),
+                    Text(texto,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: activa ? Paleta.suelo : Paleta.tinta.withAlpha(170),
+                        )),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(14),
+        borderRadius: BorderRadius.circular(27),
+        border: Border.all(color: Colors.white.withAlpha(24)),
+      ),
+      child: Row(
+        children: [
+          opcion('Realizador', Icons.videocam_outlined, !esCliente, false),
+          opcion('Cliente', Icons.key_outlined, esCliente, true),
+        ],
+      ),
+    );
+  }
+}
+
+/// "──── o ────"
+class _Separador extends StatelessWidget {
+  const _Separador();
+
+  @override
+  Widget build(BuildContext context) {
+    final linea = Expanded(child: Divider(color: Colors.white.withAlpha(40), height: 1));
+    return Row(
+      children: [
+        linea,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text('o', style: estiloSuave(tamano: 14)),
+        ),
+        linea,
+      ],
+    );
+  }
+}
+
+/// Botón "Continuar con Google" con la "G" de colores (sin imagen externa).
+class _BotonGoogle extends StatelessWidget {
+  final VoidCallback? alTocar;
+  const _BotonGoogle({required this.alTocar});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 54,
+      child: OutlinedButton(
+        onPressed: alTocar,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: Colors.white.withAlpha(50)),
+          backgroundColor: Colors.white.withAlpha(10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Text('G',
+                  style: TextStyle(
+                      color: Color(0xFF4285F4), fontWeight: FontWeight.w900, fontSize: 15)),
+            ),
+            const SizedBox(width: 12),
+            const Text('Continuar con Google',
+                style: TextStyle(color: Paleta.tinta, fontWeight: FontWeight.w700, fontSize: 15)),
+          ],
         ),
       ),
     );
@@ -158,36 +440,6 @@ class _PantallaEntradaState extends State<PantallaEntrada> {
 
 /// Dónde se descarga la última versión de la app de Android (APK).
 const String enlaceApk = 'https://github.com/El-Axel/claqueta_app/releases/latest';
-
-/// En la web, el realizador ve dónde descargar la app de Android.
-Future<void> _realizadorEnWeb(BuildContext context) => hojaInferior<void>(
-      context,
-      (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Claqueta para realizadores', style: estiloDisplay(tamano: 16)),
-          const SizedBox(height: 8),
-          Text(
-            'Cotizar, agendar, cobrar y enviar por Gmail y Calendar se hace en la app de '
-            'Android. Descárgala, instálala y entra con tu cuenta de Google: tus datos se '
-            'guardan en la nube.',
-            style: estiloSuave(tamano: 14),
-          ),
-          const SizedBox(height: 16),
-          BotonClaqueta('Descargar la app (Android)', () async {
-            var ok = false;
-            try {
-              ok = await launchUrl(Uri.parse(enlaceApk), mode: LaunchMode.externalApplication);
-            } catch (_) {}
-            if (!ok && ctx.mounted) mostrarAviso(ctx, 'No se pudo abrir el enlace de descarga');
-          }, icono: Icons.download_outlined),
-          const SizedBox(height: 10),
-          Text('En iPhone y en el navegador, Claqueta funciona como espacio del cliente.',
-              style: estiloSuave(tamano: 12)),
-        ],
-      ),
-    );
 
 class PantallaGoogle extends StatefulWidget {
   const PantallaGoogle({super.key});

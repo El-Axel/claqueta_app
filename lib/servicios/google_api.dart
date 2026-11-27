@@ -71,8 +71,12 @@ class ServicioGoogle extends ChangeNotifier {
         notifyListeners();
       }
     }, onError: (_) {});
-    // Recupera la sesión anterior sin mostrar nada (si Android la da).
-    unawaited(g.attemptLightweightAuthentication()?.catchError((_) => null));
+    // Recupera la sesión anterior sin mostrar nada, SOLO si ya se había
+    // conectado Google antes. Sin sesión previa, Android abriría por su
+    // cuenta la ventana "Use your account for Claqueta" en la entrada.
+    if (_correoGuardado.isNotEmpty) {
+      unawaited(g.attemptLightweightAuthentication()?.catchError((_) => null));
+    }
   }
 
   Future<void> _recordar(GoogleSignInAccount u) async {
