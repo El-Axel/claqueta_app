@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/widgets.dart' as pw;
 import 'modelos.dart';
 import 'tienda.dart';
@@ -18,7 +19,18 @@ const PdfColor _tinta = PdfColor.fromInt(0xFFF4F1EA);
 const PdfColor _gris = PdfColor.fromInt(0xFF5A6B70);
 const PdfColor _linea = PdfColor.fromInt(0xFFD9DFE0);
 
-pw.Widget _encabezado(String titulo, String subtitulo, Config cfg) {
+/// Isotipo de la marca (blanco) para el sello del encabezado. Si no se
+/// puede leer (por ejemplo, en pruebas), se usa la letra "C".
+Future<pw.MemoryImage?> _isotipo() async {
+  try {
+    final datos = await rootBundle.load('assets/icono/isotipo_blanco.png');
+    return pw.MemoryImage(datos.buffer.asUint8List());
+  } catch (_) {
+    return null;
+  }
+}
+
+pw.Widget _encabezado(String titulo, String subtitulo, Config cfg, [pw.MemoryImage? logo]) {
   return pw.Container(
     padding: pw.EdgeInsets.all(20),
     decoration: pw.BoxDecoration(
@@ -36,9 +48,12 @@ pw.Widget _encabezado(String titulo, String subtitulo, Config cfg) {
             color: _teal,
             borderRadius: pw.BorderRadius.circular(12),
           ),
-          child: pw.Text('C',
-              style: pw.TextStyle(
-                  color: _suelo, fontSize: 24, fontWeight: pw.FontWeight.bold)),
+          padding: const pw.EdgeInsets.all(9),
+          child: logo != null
+              ? pw.Image(logo)
+              : pw.Text('C',
+                  style: pw.TextStyle(
+                      color: _suelo, fontSize: 24, fontWeight: pw.FontWeight.bold)),
         ),
         pw.SizedBox(width: 14),
         pw.Expanded(
@@ -108,6 +123,7 @@ pw.Widget _celda(String texto, double ancho,
 
 /// PDF de una cotización.
 Future<Uint8List> pdfCotizacion(Cotizacion c) async {
+  final logo = await _isotipo();
   final cl = tienda.cliente(c.clienteId);
   final cfg = tienda.config;
   final doc = pw.Document(title: folio(c.n), author: cfg.negocio);
@@ -118,7 +134,7 @@ Future<Uint8List> pdfCotizacion(Cotizacion c) async {
       margin: pw.EdgeInsets.all(36),
       footer: (ctx) => _pie(cfg),
       build: (ctx) => [
-        _encabezado('COTIZACION', folio(c.n), cfg),
+        _encabezado('COTIZACION', folio(c.n), cfg, logo),
         pw.SizedBox(height: 22),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -220,6 +236,7 @@ Future<Uint8List> pdfCotizacion(Cotizacion c) async {
 
 /// PDF del catálogo: servicios con precio por unidad y paquetes.
 Future<Uint8List> pdfCatalogo() async {
+  final logo = await _isotipo();
   final cfg = tienda.config;
   final doc = pw.Document(title: 'Catalogo de servicios', author: cfg.negocio);
 
@@ -229,7 +246,7 @@ Future<Uint8List> pdfCatalogo() async {
       margin: pw.EdgeInsets.all(36),
       footer: (ctx) => _pie(cfg),
       build: (ctx) => [
-        _encabezado('CATALOGO', 'Servicios y paquetes', cfg),
+        _encabezado('CATALOGO', 'Servicios y paquetes', cfg, logo),
         pw.SizedBox(height: 22),
         pw.Text('PAQUETES', style: pw.TextStyle(color: _gris, fontSize: 9)),
         pw.SizedBox(height: 8),

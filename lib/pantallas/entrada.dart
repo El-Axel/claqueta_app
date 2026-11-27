@@ -310,14 +310,8 @@ class _Marca extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration:
-              BoxDecoration(color: Paleta.arena, borderRadius: BorderRadius.circular(14)),
-          child: Text('C', style: estiloDisplay(tamano: 20, color: Paleta.suelo)),
-        ),
+        // El mismo ícono del celular (isotipo blanco sobre teal).
+        Image.asset('assets/icono/icono_redondeado.png', width: 44, height: 44),
         const SizedBox(width: 12),
         Text('Claqueta', style: estiloDisplay(tamano: 20)),
       ],

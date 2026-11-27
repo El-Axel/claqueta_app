@@ -39,8 +39,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    # Íconos de marca que se usan DENTRO de la app (entrada y PDF).
+    - assets/icono/icono_redondeado.png
+    - assets/icono/isotipo_blanco.png
+    - assets/icono/isotipo_arena.png
 
-# Ícono de la app (claqueta arena sobre degradado petróleo).
+# Ícono de la app: isotipo BLANCO sobre degradado teal ("Blanco sobre teal").
 # Se regenera con: dart run flutter_launcher_icons
 flutter_launcher_icons:
   android: true
@@ -49,9 +54,11 @@ flutter_launcher_icons:
   # Ícono adaptativo (Android 8+): cada celular lo recorta en su forma.
   adaptive_icon_background: "assets/icono/fondo.png"
   adaptive_icon_foreground: "assets/icono/frente.png"
-  # frente.png ya trae su margen (símbolo al 66 % del lienzo, dentro de la
-  # zona segura); sin margen extra para que no se vea pequeño.
+  # frente.png ya trae su margen (símbolo dentro de la zona segura de
+  # Android); sin margen extra para que no se vea pequeño.
   adaptive_icon_foreground_inset: 0
+  # Android 13+: ícono "con tema" (monocromo) si el usuario lo activa.
+  adaptive_icon_monochrome: "assets/icono/monocromo.png"
   min_sdk_android: 21
   web:
     generate: true
