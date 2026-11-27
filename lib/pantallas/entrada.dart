@@ -310,9 +310,9 @@ class _Marca extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // El mismo ícono del celular (isotipo blanco sobre teal).
-        Image.asset('assets/icono/icono_redondeado.png', width: 44, height: 44),
-        const SizedBox(width: 12),
+        // Isotipo solo, en arena (el color de acento), sin recuadro.
+        Image.asset('assets/icono/isotipo_arena.png', width: 46, height: 46),
+        const SizedBox(width: 10),
         Text('Claqueta', style: estiloDisplay(tamano: 20)),
       ],
     );
